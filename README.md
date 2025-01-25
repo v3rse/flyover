@@ -5,7 +5,7 @@
 A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by displaying errors, warnings, and information messages using customizable overlays.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/konrad1977/overlay-usage/refs/heads/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
   
 </p>
 ## Features
