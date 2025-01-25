@@ -58,6 +58,27 @@
   "Face used for info overlays."
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-info-icon " "
+  "Icon used for information."
+  :type 'string
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-warning-icon " "
+  "Icon used for warnings."
+  :type 'string
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-error-icon " "
+  "Icon used for warnings."
+  :type 'string
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-percent-darker 50
+  "Icon background percent darker.
+Based on foreground color"
+  :type 'integer
+  :group 'flycheck-overlay)
+
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions."
   (condition-case nil
@@ -137,20 +158,20 @@ REGION should be a cons cell (BEG . END) of buffer positions."
     (_ 'flycheck-overlay-warning)))
 
 (defun flycheck-overlay--get-indicator (type)
-  "Return the indicator string corresponding to the error TYPE. asdljsadlkj lakdjs alksjd alskdj asldkj asldkj asdlkj asldkj "
+  "Return the indicator string corresponding to the error TYPE."
   (let* ((props (pcase type
                   ('flycheck-overlay-error
-                   (cons " " 'flycheck-overlay-error))
+                   (cons flycheck-overlay-error-icon 'flycheck-overlay-error))
                   ('flycheck-overlay-warning
-                   (cons " " 'flycheck-overlay-warning))
+                   (cons flycheck-overlay-warning-icon 'flycheck-overlay-warning))
                   ('flycheck-overlay-info
-                   (cons " " 'flycheck-overlay-info))
+                   (cons flycheck-overlay-info-icon 'flycheck-overlay-info))
                   (_
-                   (cons " " 'flycheck-overlay-info))))
+                   (cons flycheck-overlay-info-icon 'flycheck-overlay-info))))
          (icon (car props))
          (face-name (cdr props))
          (color (face-attribute face-name :foreground))
-         (bg-color (flycheck-overay--darken-color color 50)))
+         (bg-color (flycheck-overay--darken-color color flycheck-overlay-percent-darker)))
     
     (concat
      ;; Left padding
@@ -280,15 +301,18 @@ REGION should be a cons cell (BEG . END) of buffer positions."
 
 (defun flycheck-overlay--handle-buffer-changes (&rest _)
   "Handle buffer modifications by clearing overlays on the current line while editing."
-  (when (buffer-modified-p)
-    (let ((current-line (line-number-at-pos)))
-      (dolist (ov flycheck-overlay--overlays)
-        (when (and (overlayp ov)
-                   (let ((ov-line (line-number-at-pos (overlay-start ov))))
-                     (= ov-line current-line)))
-          (delete-overlay ov)))
-      (setq flycheck-overlay--overlays
-            (cl-remove-if-not #'overlay-buffer flycheck-overlay--overlays)))))
+  (condition-case err
+      (when (buffer-modified-p)
+        (let ((current-line (line-number-at-pos)))
+          (dolist (ov flycheck-overlay--overlays)
+            (when (and (overlayp ov)
+                       (let ((ov-line (line-number-at-pos (overlay-start ov))))
+                         (= ov-line current-line)))
+              (delete-overlay ov)))
+          (setq flycheck-overlay--overlays
+                (cl-remove-if-not #'overlay-buffer flycheck-overlay--overlays))))
+    (error
+     (message "Error in flycheck-overlay--handle-buffer-changes: %S" err))))
 
 (defun flycheck-overlay--color-to-rgb (color)
   "Convert COLOR (hex or name) to RGB components."

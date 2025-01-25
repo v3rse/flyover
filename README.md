@@ -1,5 +1,7 @@
 # flycheck-overlay
 
+❤️ [Please sponsor me if you like this package](https://github.com/sponsors/konrad1977)
+
 A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by displaying errors, warnings, and information messages using customizable overlays.
 
 ## Features
@@ -91,6 +93,29 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 - Update in real-time as you type
 - Clear automatically when errors are fixed
 
+
+## Flycheck Overlay Icons
+
+You can customize the icons used for different types of Flycheck messages in the overlay display. These settings allow you to define custom icons for information, warning, and error messages.
+
+### Available Settings
+
+```elisp
+(defcustom flycheck-overlay-info-icon " "
+  "Icon used for information.")
+
+(defcustom flycheck-overlay-warning-icon " "
+  "Icon used for warnings.")
+
+(defcustom flycheck-overlay-error-icon " "
+  "Icon used for errors.")
+  
+;; Custom icons using different Unicode characters
+(setq flycheck-overlay-info-icon "🛈")
+(setq flycheck-overlay-warning-icon "⚠")
+(setq flycheck-overlay-error-icon "✘")
+```
+
 ## Contributing
 
 1. Fork the repository
@@ -98,11 +123,6 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## Requirements
-
-- Emacs 25.1 or higher
-- Flycheck 0.23 or higher
 
 
 ## Acknowledgments
