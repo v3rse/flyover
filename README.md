@@ -6,8 +6,8 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 
 <p align="center">
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
-  
 </p>
+
 ## Features
 
 - 🎨 Beautiful, customizable overlays for error display
@@ -137,3 +137,9 @@ You can customize the icons used for different types of Flycheck messages in the
 ## Author
 
 Mikael Konradsson <mikael.konradsson@outlook.com>
+  
+  
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
+</p>
