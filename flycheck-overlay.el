@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "25.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
@@ -86,6 +86,11 @@ Based on foreground color"
 
 (defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
   "Hide error messages when the cursor is on the same line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-hide-checker-name t
+  "Hide the checker name in the error message."
   :type 'boolean
   :group 'flycheck-overlay)
 
@@ -273,11 +278,12 @@ REGION should be a cons cell (BEG . END) of buffer positions."
           (setq pos end))))
     input))
 
-(defun flycheck-overlay--clean-message (msg)
+(defun flycheck-overlay--remove-checker-name (msg)
   "Remove all text up to and including the first ':' in MSG."
-  (if (string-match ":\\(.*\\)" msg)
-      (match-string 1 msg)
-    msg))
+  (when flycheck-overlay-hide-checker-name
+    (if (string-match ":\\(.*\\)" msg)
+        (setq msg (match-string 1 msg))))
+  msg)
 
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
@@ -288,7 +294,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
           (dolist (err errs)
             (condition-case err-handler
                 (let* ((level (flycheck-error-level err))
-                       (msg (flycheck-overlay--clean-message (flycheck-error-message err)))
+                       (msg (flycheck-overlay--remove-checker-name (flycheck-error-message err)))
                        (region (flycheck-overlay--get-error-region err)))
                   (when (and region (car region) (cdr region) msg)
                     (let ((overlay (flycheck-overlay--create-overlay region level msg)))
