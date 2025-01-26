@@ -19,29 +19,12 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 
 ## Screenshots
 
-[Add screenshots here]
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_3.png" alt="Screenshot of overlay-usage for Emacs."/>
+</p>
 
 ## Installation
-
-### Using MELPA (recommended)
-
-```elisp
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
-(package-initialize)
-(package-refresh-contents)
-
-(package-install 'flycheck-overlay)
-```
-
-### Using use-package
-
-```elisp
-(use-package flycheck-overlay
-  :ensure t
-  :after flycheck
-  :hook (flycheck-mode . flycheck-overlay-mode))
-```
 
 ### Manual Installation
 
@@ -138,8 +121,3 @@ You can customize the icons used for different types of Flycheck messages in the
 
 Mikael Konradsson <mikael.konradsson@outlook.com>
   
-  
-<p align="center">
-  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
-  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_3.png" alt="Screenshot of overlay-usage for Emacs."/>
-</p>
