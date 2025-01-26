@@ -27,6 +27,12 @@
 (defvar-local flycheck-overlay--overlays nil
   "List of overlays used in the current buffer.")
 
+(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\)"
+  "Regex used to mark quotes.")
+
+(defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
+  "Regex used to mark parentheses.")
+
 (defface flycheck-overlay-error
   '((t :background "#453246"
        :foreground "#ea8faa"
@@ -224,12 +230,9 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                                      'rear-nonsticky t))  ; Remove cursor-intangible
          (marked-string (flycheck-overlay--mark-all-symbols
                          :input display-string
-                         :regex "\\('[^']+'\\)"
+                         :regex flycheck-overlay-regex-mark-quotes
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
-         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg))
-         (eol (save-excursion
-                (goto-char beg)
-                (line-end-position))))
+         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
     (if (and flycheck-overlay-show-at-eol
              (< (+ col-pos (length display-msg)) (window-width)))
         (overlay-put overlay 'after-string (propertize overlay-string
@@ -256,7 +259,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
    :input (if flycheck-overlay-show-at-eol
               (concat " " indicator marked-string)
             (concat " " (make-string col-pos ?\s) indicator marked-string))
-   :regex "\\(\(.*\)\\)"
+   :regex flycheck-overlay-regex-mark-parens
    :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
 (defun replace-curly-quotes (text)
