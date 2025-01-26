@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "25.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
@@ -84,6 +84,11 @@ Based on foreground color"
   :type 'boolean
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
+  "Hide error messages when the cursor is on the same line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions."
   (condition-case nil
@@ -137,7 +142,6 @@ ERR is a Flycheck error object. Returns a cons cell (START . END) representing t
      (message "Debug region: Error getting region: %S" region-err)
      nil)))
 
-
 (defun flycheck-overlay--create-overlay (region type msg)
   "Create an overlay at REGION of TYPE with message MSG.
 REGION should be a cons cell (BEG . END) of buffer positions."
@@ -147,8 +151,11 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                  (integer-or-marker-p (cdr region)))
         (let* ((beg (max (point-min) (car region)))
                (end (min (point-max) (cdr region)))
+               (next-line-beg (save-excursion
+                                (goto-char end)
+                                (line-beginning-position 2)))
                (face (flycheck-overlay--get-face type))
-               (overlay (make-overlay beg end nil t nil)))
+               (overlay (make-overlay beg next-line-beg nil t nil)))
           (flycheck-overlay--configure-overlay overlay face msg beg)
           overlay))
     (error
@@ -196,21 +203,35 @@ REGION should be a cons cell (BEG . END) of buffer positions."
 (defun flycheck-overlay--configure-overlay (overlay face msg beg)
   "Configure the OVERLAY with FACE and MSG starting at BEG."
   (overlay-put overlay 'flycheck-overlay t)
-  (let* ((col-pos (save-excursion (goto-char beg) (current-column)))
+  (let* ((col-pos (save-excursion
+                    (goto-char beg)
+                    (current-column)))
          (existing-bg (face-background face nil t))
          (indicator (flycheck-overlay--get-indicator face))
          (display-msg (concat " " msg " "))
-         (display-string (propertize display-msg 'face face 'cursor-intangible t 'rear-nonsticky t))
+         (display-string (propertize display-msg
+                                     'face face
+                                     'cursor-sensor-functions nil
+                                     'cursor-intangible t
+                                     'rear-nonsticky t))  ; Remove cursor-intangible
          (marked-string (flycheck-overlay--mark-all-symbols
                          :input display-string
                          :regex "\\('.*'\\)"
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
          (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
-    (overlay-put overlay 'after-string (propertize overlay-string
-                                                   'cursor-intangible t
-                                                   'field 'flycheck-overlay))
+    (if flycheck-overlay-show-at-eol
+        (overlay-put overlay 'after-string (propertize overlay-string
+                                                       'rear-nonsticky t
+                                                       'cursor-sensor-functions nil
+                                                       'cursor-intangible t
+                                                       'field nil))
+        (overlay-put overlay 'after-string (propertize (concat overlay-string "\n")
+                                                       'rear-nonsticky t
+                                                       'cursor-sensor-functions nil
+                                                       'cursor-intangible t
+                                                       'field nil)))
     (overlay-put overlay 'evaporate t)
-    (overlay-put overlay 'priority 2000)
+    (overlay-put overlay 'priority 1000)
     (overlay-put overlay 'modification-hooks '(flycheck-overlay--clear-overlay-on-modification))))
 
 (defun flycheck-overlay--clear-overlay-on-modification (overlay &rest _)
@@ -222,7 +243,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
               (concat " " indicator marked-string)
-            (concat "\n" (make-string col-pos ?\s) indicator marked-string))
+            (concat " " (make-string col-pos ?\s) indicator marked-string))
    :regex "\\(\(.*\)\\)"
    :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
@@ -271,7 +292,6 @@ REGION should be a cons cell (BEG . END) of buffer positions."
     (error
      (message "Debug: Top-level display error: %S" display-err))))
 
-
 (defun flycheck-overlay--clear-overlays ()
   "Remove all flycheck overlays from the current buffer."
   (dolist (ov flycheck-overlay--overlays)
@@ -311,9 +331,15 @@ REGION should be a cons cell (BEG . END) of buffer positions."
     (flycheck-overlay--clear-overlays)))
 
 (defun flycheck-overlay--maybe-display-errors ()
-  "Display errors only if buffer is not being modified."
+  "Display errors except on current line."
   (unless (buffer-modified-p)
-    (flycheck-overlay--display-errors)))
+    (let ((current-line (line-number-at-pos)))
+      (flycheck-overlay--display-errors)
+      (when flycheck-overlay-hide-when-cursor-is-on-same-line
+      (dolist (ov flycheck-overlay--overlays)
+        (when (and (overlayp ov)
+                   (= (line-number-at-pos (overlay-start ov)) current-line))
+          (delete-overlay ov)))))))
 
 (defun flycheck-overlay--handle-buffer-changes (&rest _)
   "Handle buffer modifications by clearing overlays on the current line while editing."
@@ -350,6 +376,27 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                           rgb)))
     (apply 'flycheck-overlay--rgb-to-hex darkened)))
 
+;; (defun clear-flycheck-overlays-on-insert ()
+;;   "Clear Flycheck overlays when entering insert mode."
+;;   (when (and flycheck-overlay-mode (not (minibufferp)))
+;;     (flycheck-overlay--clear-overlays)))
+
+;; (defun restore-flycheck-overlays-on-exit ()
+;;   "Restore Flycheck overlays when exiting insert mode."
+;;   (when (and flycheck-overlay-mode (not (minibufferp)))
+;;     (flycheck-overlay--maybe-display-errors)))
+
+;; ;;; Clear hooks
+;; (add-hook 'evil-insert-state-entry-hook #'clear-flycheck-overlays-on-insert)
+
+;; ;;; Restore hooks
+;; (add-hook 'evil-insert-state-exit-hook #'restore-flycheck-overlays-on-exit)
+
+;; (add-hook 'post-command-hook
+;;           (lambda ()
+;;             (if (eq this-command 'self-insert-command)
+;;                 (clear-flycheck-overlays-on-insert)
+;;               (restore-flycheck-overlays-on-exit))))
 
 (provide 'flycheck-overlay)
 ;;; flycheck-overlay.el ends here
