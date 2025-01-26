@@ -79,6 +79,11 @@ Based on foreground color"
   :type 'integer
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-show-at-eol t
+  "Show error messages at the end of the line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions."
   (condition-case nil
@@ -200,15 +205,20 @@ REGION should be a cons cell (BEG . END) of buffer positions."
          (marked-string (flycheck-overlay--mark-all-symbols
                          :input display-string
                          :regex "\\('.*'\\)"
-                         :property `(:inherit flycheck-overlay-marker :background ,existing-bg))))
-    (overlay-put overlay 'after-string
-                 (flycheck-overlay--mark-all-symbols
-                  :input (concat "\n" (make-string col-pos ?\s) indicator marked-string)
-                  :regex "\\(\(.*\)\\)"
-                  :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
+                         :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
+         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
+    (overlay-put overlay 'after-string overlay-string)
     (overlay-put overlay 'help-echo msg)
     (overlay-put overlay 'priority 2000)))
 
+(defun flycheck-overlay--create-overlay-string (col-pos indicator marked-string existing-bg)
+  "Create the overlay string based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
+  (flycheck-overlay--mark-all-symbols
+   :input (if flycheck-overlay-show-at-eol
+              (concat " " indicator marked-string)
+            (concat "\n" (make-string col-pos ?\s) indicator marked-string))
+   :regex "\\(\(.*\)\\)"
+   :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
 (defun replace-curly-quotes (text)
   "Replace curly quotes with straight quotes in TEXT."
