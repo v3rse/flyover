@@ -22,6 +22,7 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 <p align="center">
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_3.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/eol.png" alt="Screenshot of overlay-usage for Emacs."/>
 </p>
 
 ## Installation
