@@ -219,7 +219,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                                      'rear-nonsticky t))  ; Remove cursor-intangible
          (marked-string (flycheck-overlay--mark-all-symbols
                          :input display-string
-                         :regex "\\('.*'\\)"
+                         :regex "\\('[^']+'\\)"
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
          (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg))
          (eol (save-excursion
