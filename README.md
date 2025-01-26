@@ -102,12 +102,17 @@ You can customize the icons used for different types of Flycheck messages in the
   :type 'boolean
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
+  "Hide error messages when the cursor is on the same line."
+  :type 'boolean
+  :group 'flycheck-overlay)
   
 ;; Custom icons using different Unicode characters
 (setq flycheck-overlay-info-icon "🛈")
 (setq flycheck-overlay-warning-icon "⚠")
 (setq flycheck-overlay-error-icon "✘")
-(setq flyheck-overlay-show-at-eol t) ;; show at end of the line instead.
+(setq flycheck-overlay-show-at-eol t) ;; show at end of the line instead.
+(setq flycheck-overlay-hide-when-cusor-is-on-same-line t) ;;; Hide overlay when cursor is at same line good for shot-at-eol.
 ```
 
 ## Contributing

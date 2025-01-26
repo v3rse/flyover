@@ -152,8 +152,11 @@ REGION should be a cons cell (BEG . END) of buffer positions."
         (let* ((beg (max (point-min) (car region)))
                (end (min (point-max) (cdr region)))
                (next-line-beg (save-excursion
-                                (goto-char end)
-                                (line-beginning-position 2)))
+                                (if flycheck-overlay-show-at-eol
+                                    end
+                                    (progn
+                                      (goto-char end)
+                                      (line-beginning-position 2)))))
                (face (flycheck-overlay--get-face type))
                (overlay (make-overlay beg next-line-beg nil t nil)))
           (flycheck-overlay--configure-overlay overlay face msg beg)
@@ -218,18 +221,22 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                          :input display-string
                          :regex "\\('.*'\\)"
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
-         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
-    (if flycheck-overlay-show-at-eol
+         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg))
+         (eol (save-excursion
+                (goto-char beg)
+                (line-end-position))))
+    (if (and flycheck-overlay-show-at-eol
+             (< (+ col-pos (length display-msg)) (window-width)))
         (overlay-put overlay 'after-string (propertize overlay-string
                                                        'rear-nonsticky t
                                                        'cursor-sensor-functions nil
                                                        'cursor-intangible t
                                                        'field nil))
-        (overlay-put overlay 'after-string (propertize (concat overlay-string "\n")
-                                                       'rear-nonsticky t
-                                                       'cursor-sensor-functions nil
-                                                       'cursor-intangible t
-                                                       'field nil)))
+      (overlay-put overlay 'after-string (propertize (concat overlay-string "\n")
+                                                     'rear-nonsticky t
+                                                     'cursor-sensor-functions nil
+                                                     'cursor-intangible t
+                                                     'field nil)))
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'priority 1000)
     (overlay-put overlay 'modification-hooks '(flycheck-overlay--clear-overlay-on-modification))))
