@@ -22,7 +22,6 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 <p align="center">
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_3.png" alt="Screenshot of overlay-usage for Emacs."/>
-  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/eol.png" alt="Screenshot of overlay-usage for Emacs."/>
 </p>
 
 ## Installation
@@ -86,7 +85,7 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 
 You can customize the icons used for different types of Flycheck messages in the overlay display. These settings allow you to define custom icons for information, warning, and error messages.
 
-### Available Settings
+### Icon settings
 
 ```elisp
 (defcustom flycheck-overlay-info-icon " "
@@ -103,18 +102,37 @@ You can customize the icons used for different types of Flycheck messages in the
   :type 'boolean
   :group 'flycheck-overlay)
 
+(setq flycheck-overlay-info-icon "🛈")
+(setq flycheck-overlay-warning-icon "⚠")
+(setq flycheck-overlay-error-icon "✘")
+```
+
+### Visibility settings
+
+```elisp
 (defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
   "Hide error messages when the cursor is on the same line."
   :type 'boolean
   :group 'flycheck-overlay)
   
 ;; Custom icons using different Unicode characters
-(setq flycheck-overlay-info-icon "🛈")
-(setq flycheck-overlay-warning-icon "⚠")
-(setq flycheck-overlay-error-icon "✘")
 (setq flycheck-overlay-show-at-eol t) ;; show at end of the line instead.
 (setq flycheck-overlay-hide-when-cusor-is-on-same-line t) ;;; Hide overlay when cursor is at same line good for shot-at-eol.
 ```
+
+### Show or hide checker name
+
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/checker_name.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/no_checker_name.png" alt="Screenshot of overlay-usage for Emacs."/>
+</p>
+
+### Show under or after the faulty code
+
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/eol.png" alt="Screenshot of overlay-usage for Emacs."/>
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/under.png" alt="Screenshot of overlay-usage for Emacs."/>
+</p>
 
 ## Contributing
 
