@@ -97,10 +97,17 @@ You can customize the icons used for different types of Flycheck messages in the
 (defcustom flycheck-overlay-error-icon " "
   "Icon used for errors.")
   
+(defcustom flycheck-overlay-show-at-eol nil
+  "Show error messages at the end of the line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+  
 ;; Custom icons using different Unicode characters
 (setq flycheck-overlay-info-icon "🛈")
 (setq flycheck-overlay-warning-icon "⚠")
 (setq flycheck-overlay-error-icon "✘")
+(setq flyheck-overlay-show-at-eol t) ;; show at end of the line instead.
 ```
 
 ## Contributing

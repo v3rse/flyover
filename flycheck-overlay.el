@@ -79,7 +79,7 @@ Based on foreground color"
   :type 'integer
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-show-at-eol t
+(defcustom flycheck-overlay-show-at-eol nil
   "Show error messages at the end of the line."
   :type 'boolean
   :group 'flycheck-overlay)
@@ -149,7 +149,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                (end (min (point-max) (cdr region)))
                (face (flycheck-overlay--get-face type))
                (overlay (make-overlay beg end nil t nil)))
-          (flycheck-overlay--configure-overlay overlay face msg beg)))
+          (flycheck-overlay--configure-overlay overlay face msg beg)
+          overlay))
     (error
      (message "Error creating overlay: %S" ov-err)
      nil)))
@@ -192,11 +193,9 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                  'face `(:background ,bg-color)
                  'display '(space :width 0.4)))))
 
-
 (defun flycheck-overlay--configure-overlay (overlay face msg beg)
   "Configure the OVERLAY with FACE and MSG starting at BEG."
   (overlay-put overlay 'flycheck-overlay t)
-  (overlay-put overlay 'evaporate t)
   (let* ((col-pos (save-excursion (goto-char beg) (current-column)))
          (existing-bg (face-background face nil t))
          (indicator (flycheck-overlay--get-indicator face))
@@ -207,9 +206,16 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                          :regex "\\('.*'\\)"
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
          (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
-    (overlay-put overlay 'after-string overlay-string)
-    (overlay-put overlay 'help-echo msg)
-    (overlay-put overlay 'priority 2000)))
+    (overlay-put overlay 'after-string (propertize overlay-string
+                                                   'cursor-intangible t
+                                                   'field 'flycheck-overlay))
+    (overlay-put overlay 'evaporate t)
+    (overlay-put overlay 'priority 2000)
+    (overlay-put overlay 'modification-hooks '(flycheck-overlay--clear-overlay-on-modification))))
+
+(defun flycheck-overlay--clear-overlay-on-modification (overlay &rest _)
+  "Clear OVERLAY when the buffer is modified."
+  (delete-overlay overlay))
 
 (defun flycheck-overlay--create-overlay-string (col-pos indicator marked-string existing-bg)
   "Create the overlay string based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
