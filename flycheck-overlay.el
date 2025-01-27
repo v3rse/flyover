@@ -9,6 +9,8 @@
 ;; URL: https://github.com/yourusername/flycheck-overlay
 
 ;;; Commentary:
+;; This package provides a way to display Flycheck errors using overlays.
+;; It offers customization options for icons, colors, and display behavior.
 
 ;;; Code:
 
@@ -100,12 +102,12 @@ Based on foreground color"
   :type 'boolean
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-icon-left-padding 0.8
+(defcustom flycheck-overlay-icon-left-padding 0.9
   "Padding to the left of the icon."
   :type 'number
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-icon-right-padding 0.4
+(defcustom flycheck-overlay-icon-right-padding 0.5
   "Padding to the right of the icon."
   :type 'number
   :group 'flycheck-overlay)
@@ -116,7 +118,8 @@ Based on foreground color"
   :group 'flycheck-overlay)
 
 (defun flycheck-overlay--sort-errors (errors)
-  "Safely sort ERRORS by their buffer positions."
+  "Safely sort ERRORS by their buffer positions.
+This function filters out invalid errors and sorts the remaining ones."
   (condition-case nil
       (seq-filter
        (lambda (err)
@@ -221,21 +224,22 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                    (cons flycheck-overlay-info-icon 'flycheck-overlay-info))))
          (icon (car props))
          (face-name (cdr props))
+         (height (face-attribute face-name :height))
          (color (face-attribute face-name :foreground))
          (bg-color (flycheck-overay--darken-color color flycheck-overlay-percent-darker)))
     
     (concat
      ;; Left padding
      (propertize " "
-                 'face `(:background ,bg-color)
+                 'face `(:background ,bg-color, :height ,height)
                  'display '(space :width flycheck-overlay-icon-left-padding))
      ;; Icon
      (propertize icon
-                 'face `(:foreground ,color :background ,bg-color)
-                 'display '(raise 0.0))
+                 'face `(:foreground ,color :background ,bg-color, :height ,height)
+                 'display '(raise -0.02))
      ;; Right padding
      (propertize " "
-                 'face `(:background ,bg-color)
+                 'face `(:background ,bg-color, :height ,height)
                  'display '(space :width flycheck-overlay-icon-right-padding)))))
 
 (defun flycheck-overlay--configure-overlay (overlay face msg beg)
