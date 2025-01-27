@@ -100,6 +100,16 @@ Based on foreground color"
   :type 'boolean
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-icon-left-padding 0.8
+  "Padding to the left of the icon."
+  :type 'number
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-icon-right-padding 0.4
+  "Padding to the right of the icon."
+  :type 'number
+  :group 'flycheck-overlay)
+
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions."
   (condition-case nil
@@ -204,7 +214,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
      ;; Left padding
      (propertize " "
                  'face `(:background ,bg-color)
-                 'display '(space :width 0.8))
+                 'display '(space :width flycheck-overlay-icon-left-padding))
      ;; Icon
      (propertize icon
                  'face `(:foreground ,color :background ,bg-color)
@@ -212,7 +222,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
      ;; Right padding
      (propertize " "
                  'face `(:background ,bg-color)
-                 'display '(space :width 0.4)))))
+                 'display '(space :width flycheck-overlay-icon-right-padding)))))
 
 (defun flycheck-overlay--configure-overlay (overlay face msg beg)
   "Configure the OVERLAY with FACE and MSG starting at BEG."
@@ -281,6 +291,24 @@ REGION should be a cons cell (BEG . END) of buffer positions."
           (setq pos end))))
     input))
 
+(defun flycheck-overlay-errors-at (pos)
+  "Return the Flycheck errors at POS."
+  (delq nil (mapcar (lambda (ov)
+                      (overlay-get ov 'flycheck-overlay))
+                    (overlays-at pos))))
+
+(defun flycheck-display-error-at-point ()
+  "Display the Flycheck error at point, if any."
+  (let ((errors (flycheck-overlay-errors-at (point))))
+    (when errors
+      (let ((messages (delq nil (mapcar (lambda (err)
+                                          (when (flycheck-error-p err)
+                                            (flycheck-error-format-message-and-id err)))
+                                        errors))))
+        (when messages
+          (flycheck-display-error-messages messages))))))
+
+
 (defun flycheck-overlay--remove-checker-name (msg)
   "Remove all text up to and including the first ':' in MSG."
   (when flycheck-overlay-hide-checker-name
@@ -294,17 +322,18 @@ REGION should be a cons cell (BEG . END) of buffer positions."
       (let ((errs (flycheck-overlay--sort-errors (or errors flycheck-current-errors))))
         (when (listp errs)
           (flycheck-overlay--clear-overlays)  ; Clear existing overlays
-          (dolist (err errs)
-            (condition-case err-handler
-                (let* ((level (flycheck-error-level err))
-                       (msg (flycheck-overlay--remove-checker-name (flycheck-error-message err)))
-                       (region (flycheck-overlay--get-error-region err)))
-                  (when (and region (car region) (cdr region) msg)
-                    (let ((overlay (flycheck-overlay--create-overlay region level msg)))
-                      (when overlay
-                        (push overlay flycheck-overlay--overlays)))))
-              (error
-               (message "Debug: Error handling individual error: %S" err-handler))))))
+          (dolist (err (delq nil errs))  ; Filter out nil values
+            (when (flycheck-error-p err)  ; Ensure err is a valid flycheck-error
+              (condition-case err-handler
+                  (let* ((level (flycheck-error-level err))
+                         (msg (flycheck-overlay--remove-checker-name (flycheck-error-message err)))
+                         (region (flycheck-overlay--get-error-region err)))
+                    (when (and region (car region) (cdr region) msg)
+                      (let ((overlay (flycheck-overlay--create-overlay region level msg)))
+                        (when overlay
+                          (push overlay flycheck-overlay--overlays)))))
+                (error
+                 (message "Debug: Error handling individual error: %S" err-handler)))))))
     (error
      (message "Debug: Top-level display error: %S" display-err))))
 
@@ -391,28 +420,6 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                                  (floor (* component (- 100 percent) 0.01))))
                           rgb)))
     (apply 'flycheck-overlay--rgb-to-hex darkened)))
-
-;; (defun clear-flycheck-overlays-on-insert ()
-;;   "Clear Flycheck overlays when entering insert mode."
-;;   (when (and flycheck-overlay-mode (not (minibufferp)))
-;;     (flycheck-overlay--clear-overlays)))
-
-;; (defun restore-flycheck-overlays-on-exit ()
-;;   "Restore Flycheck overlays when exiting insert mode."
-;;   (when (and flycheck-overlay-mode (not (minibufferp)))
-;;     (flycheck-overlay--maybe-display-errors)))
-
-;; ;;; Clear hooks
-;; (add-hook 'evil-insert-state-entry-hook #'clear-flycheck-overlays-on-insert)
-
-;; ;;; Restore hooks
-;; (add-hook 'evil-insert-state-exit-hook #'restore-flycheck-overlays-on-exit)
-
-;; (add-hook 'post-command-hook
-;;           (lambda ()
-;;             (if (eq this-command 'self-insert-command)
-;;                 (clear-flycheck-overlays-on-insert)
-;;               (restore-flycheck-overlays-on-exit))))
 
 (provide 'flycheck-overlay)
 ;;; flycheck-overlay.el ends here
