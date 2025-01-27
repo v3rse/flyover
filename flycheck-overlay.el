@@ -110,6 +110,11 @@ Based on foreground color"
   :type 'number
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-debug nil
+  "Enable debug messages for flycheck-overlay."
+ :type 'boolean
+  :group 'flycheck-overlay)
+
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions."
   (condition-case nil
@@ -129,7 +134,7 @@ Returns a buffer position that is guaranteed to be within bounds."
   (save-restriction
     (widen)
     (save-excursion
-      (condition-case nil
+      (condition-case err
           (progn
             (goto-char (point-min))
             (when (and line (numberp line) (> line 0))
@@ -137,8 +142,14 @@ Returns a buffer position that is guaranteed to be within bounds."
             (when (and column (numberp column) (> column 0))
               (forward-char (min (1- column)
                                  (- (line-end-position) (point)))))
-            (point))
-        (error (point-min))))))
+            (let ((pos (point)))
+              (when flycheck-overlay-debug
+                (message "Debug: Calculated position: %d" pos))
+              pos))
+        (error
+         (when flycheck-overlay-debug
+           (message "Debug: Error in get-safe-position: %S" err))
+         (point-min))))))
 
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR.
@@ -146,21 +157,24 @@ ERR is a Flycheck error object. Returns a cons cell (START . END) representing t
   (condition-case region-err
       (progn
         (unless (flycheck-error-p err)
-          ;; (message "Debug region: Not a valid error object: %S" err)
           (signal 'wrong-type-argument `(flycheck-error-p ,err)))
         (let* ((line (flycheck-error-line err))
                (column (flycheck-error-column err))
                (start-pos (flycheck-overlay--get-safe-position line column)))
-          ;; (message "Debug region: line=%S column=%S start-pos=%S" line column start-pos)
-          (when start-pos  ; Only proceed if we got a valid position
+          (when flycheck-overlay-debug
+            (message "Debug: line=%S column=%S start-pos=%S" line column start-pos))
+          (when start-pos
             (save-excursion
               (goto-char start-pos)
               (let ((end-pos (line-end-position)))
+                (when flycheck-overlay-debug
+                  (message "Debug: end-pos=%S" end-pos))
                 (when (and (integer-or-marker-p end-pos)
                            (<= end-pos (point-max)))
                   (cons start-pos end-pos)))))))
     (error
-     (message "Debug region: Error getting region: %S" region-err)
+     (when flycheck-overlay-debug
+       (message "Debug region: Error getting region: %S" region-err))
      nil)))
 
 (defun flycheck-overlay--create-overlay (region type msg)
