@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.3
+;; Version: 0.3.6
 ;; Package-Requires: ((emacs "25.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
@@ -121,13 +121,18 @@ Based on foreground color"
   "Safely sort ERRORS by their buffer positions.
 This function filters out invalid errors and sorts the remaining ones."
   (condition-case nil
-      (seq-filter
-       (lambda (err)
-         (and (flycheck-error-p err)
-              (flycheck-error-line err)
-              (or (not (flycheck-error-column err))
-                  (numberp (flycheck-error-column err)))))
-       errors)
+      (let ((sorted-errors
+             (seq-filter
+              (lambda (err)
+                (and (flycheck-error-p err)
+                     (let ((line (flycheck-error-line err))
+                           (column (flycheck-error-column err)))
+                       (and (numberp line) (>= line 0)
+                            (or (not column) (and (numberp column) (>= column 0)))))))
+              errors)))
+        (when flycheck-overlay-debug
+          (message "Debug: Sorted errors: %S" sorted-errors))
+        sorted-errors)
     (error errors)))
 
 (defun flycheck-overlay--get-safe-position (line column)
@@ -140,9 +145,9 @@ Returns a buffer position that is guaranteed to be within bounds."
       (condition-case err
           (progn
             (goto-char (point-min))
-            (when (and line (numberp line) (> line 0))
+            (when (and line (numberp line) (>= line 0))
               (forward-line (1- line)))
-            (when (and column (numberp column) (> column 0))
+            (when (and column (numberp column) (>= column 0))
               (forward-char (min (1- column)
                                  (- (line-end-position) (point)))))
             (let ((pos (point)))
@@ -328,10 +333,15 @@ REGION should be a cons cell (BEG . END) of buffer positions."
 
 
 (defun flycheck-overlay--remove-checker-name (msg)
-  "Remove all text up to and including the first ':' in MSG."
+  "Remove checker name prefix from MSG if it appears at the start.
+Checker names are expected to be at the start of the message followed by a colon.
+Ignores colons that appear within quotes or parentheses."
   (when flycheck-overlay-hide-checker-name
-    (if (string-match ":\\(.*\\)" msg)
-        (setq msg (match-string 1 msg))))
+    (let ((case-fold-search nil))
+      ;; Match start of string, followed by any characters except quotes/parens,
+      ;; followed by a colon, capturing everything after
+      (if (string-match "^[^\"'(]*?:\\(.*\\)" msg)
+          (setq msg (string-trim (match-string 1 msg))))))
   msg)
 
 (defun flycheck-overlay--display-errors (&optional errors)
@@ -346,6 +356,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                   (let* ((level (flycheck-error-level err))
                          (msg (flycheck-overlay--remove-checker-name (flycheck-error-message err)))
                          (region (flycheck-overlay--get-error-region err)))
+                    (when flycheck-overlay-debug
+                      (message "Debug: level=%S msg=%S region=%S" level msg region))
                     (when (and region (car region) (cdr region) msg)
                       (let ((overlay (flycheck-overlay--create-overlay region level msg)))
                         (when overlay
