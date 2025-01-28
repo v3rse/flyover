@@ -14,9 +14,9 @@
 
 ;;; Code:
 
-;; (define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
-;;   "Temporarily disable overlay sorting to debug issues."
-;;   nil)
+(define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
+  "Temporarily disable overlay sorting to debug issues."
+  nil)
 
 (require 'flycheck)
 (require 'cl-lib)
@@ -116,6 +116,24 @@ Based on foreground color"
   "Enable debug messages for flycheck-overlay."
  :type 'boolean
   :group 'flycheck-overlay)
+
+(defun flycheck-overlay--sort-errors (errors)
+  "Safely sort ERRORS by their buffer positions.
+This function filters out invalid errors and sorts the remaining ones."
+  (condition-case nil
+      (let ((sorted-errors
+             (seq-filter
+              (lambda (err)
+                (and (flycheck-error-p err)
+                     (let ((line (flycheck-error-line err))
+                           (column (flycheck-error-column err)))
+                       (and (numberp line) (>= line 0)
+                            (or (not column) (and (numberp column) (>= column 0)))))))
+              errors)))
+        (when flycheck-overlay-debug
+          (message "Debug: Sorted errors: %S" sorted-errors))
+        sorted-errors)
+    (error errors)))
 
 (defun flycheck-overlay--get-safe-position (line column)
   "Get a safe buffer position for LINE and COLUMN.
@@ -329,7 +347,7 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
   (condition-case display-err
-      (let ((errs (or errors flycheck-current-errors)))
+      (let ((errs (flycheck-overlay--sort-errors (or errors flycheck-current-errors))))
         (when (listp errs)
           (flycheck-overlay--clear-overlays)  ; Clear existing overlays
           (dolist (err (delq nil errs))  ; Filter out nil values
