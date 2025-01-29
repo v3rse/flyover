@@ -340,7 +340,7 @@ Ignores colons that appear within quotes or parentheses."
     (let ((case-fold-search nil))
       ;; Match start of string, followed by any characters except quotes/parens,
       ;; followed by a colon, capturing everything after
-      (if (string-match "^[^\"'(]*?:\\(.*\\)" msg)
+      (if (string-match "^[^\"'(]*?:\\(.*\\)" (replace-curly-quotes msg))
           (setq msg (string-trim (match-string 1 msg))))))
   msg)
 
