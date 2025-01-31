@@ -80,6 +80,12 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 - Update in real-time as you type
 - Clear automatically when errors are fixed
 
+### Optimization settings
+
+```elisp
+;;; Time in seconds to wait before checking and displaying errors after a change.
+(setq flycheck-overlay-debounce-interval 0.2) 
+```
 
 ## Flycheck Overlay Icons
 
@@ -88,36 +94,29 @@ You can customize the icons used for different types of Flycheck messages in the
 ### Icon settings
 
 ```elisp
-(defcustom flycheck-overlay-info-icon " "
-  "Icon used for information.")
-
-(defcustom flycheck-overlay-warning-icon " "
-  "Icon used for warnings.")
-
-(defcustom flycheck-overlay-error-icon " "
-  "Icon used for errors.")
-  
-(defcustom flycheck-overlay-show-at-eol nil
-  "Show error messages at the end of the line."
-  :type 'boolean
-  :group 'flycheck-overlay)
-
+;;; Icons
 (setq flycheck-overlay-info-icon "🛈")
 (setq flycheck-overlay-warning-icon "⚠")
 (setq flycheck-overlay-error-icon "✘")
+
+;;; Icon padding
+;;; You might want to adjust this setting if you icons are not centererd or if you more or less space.fs
+(setq flycheck-overlay-icon-left-padding 0.9)
+(setq flycheck-overlay-icon-right-padding 0.9)
 ```
 
 ### Visibility settings
 
 ```elisp
-(defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
-  "Hide error messages when the cursor is on the same line."
-  :type 'boolean
-  :group 'flycheck-overlay)
-  
-;; Custom icons using different Unicode characters
-(setq flycheck-overlay-show-at-eol t) ;; show at end of the line instead.
-(setq flycheck-overlay-hide-when-cusor-is-on-same-line t) ;;; Hide overlay when cursor is at same line good for shot-at-eol.
+;;; Hide checker name for a cleaner UI
+(setq flycheck-overlay-hide-checker-name t) 
+
+;;; show at end of the line instead.
+(setq flycheck-overlay-show-at-eol t) 
+
+;;; Hide overlay when cursor is at same line good for shot-at-eol.
+(setq flycheck-overlay-hide-when-cusor-is-on-same-line t) 
+
 ```
 
 ### Show or hide checker name

@@ -169,7 +169,8 @@ Returns a buffer position that is guaranteed to be within bounds."
 
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR.
-ERR is a Flycheck error object. Returns a cons cell (START . END) representing the region."
+ERR is a Flycheck error object.
+Returns a cons cell (START . END) representing the region."
   (condition-case region-err
       (progn
         (unless (flycheck-error-p err)
@@ -295,7 +296,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
   (delete-overlay overlay))
 
 (defun flycheck-overlay--create-overlay-string (col-pos indicator marked-string existing-bg)
-  "Create the overlay string based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
+  "Create the overlay string.
+Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
               (concat " " indicator marked-string)
@@ -341,8 +343,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
 
 
 (defun flycheck-overlay--remove-checker-name (msg)
-  "Remove checker name prefix from MSG if it appears at the start.
-Checker names are expected to be at the start of the message followed by a colon.
+  "Remove checker name prefix from (as MSG).
+If it appears at the start.
 Ignores colons that appear within quotes or parentheses."
   (when flycheck-overlay-hide-checker-name
     (let ((case-fold-search nil))
