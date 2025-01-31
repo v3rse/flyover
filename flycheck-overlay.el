@@ -416,7 +416,7 @@ Ignores colons that appear within quotes or parentheses."
 
   (save-restriction
     (widen)
-    (flycheck-overlay--clear-overlays)))
+    (flycheck-overlay--clear-overlays))
 
 (defun flycheck-overlay--maybe-display-errors ()
   "Display errors except on current line."
