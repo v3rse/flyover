@@ -120,7 +120,7 @@ Based on foreground color"
  :type 'boolean
  :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-debounce-interval 0.5
+(defcustom flycheck-overlay-debounce-interval 0.2
   "Time in seconds to wait before checking and displaying errors after a change."
   :type 'number
   :group 'flycheck-overlay)
