@@ -29,6 +29,9 @@
 (defvar-local flycheck-overlay--overlays nil
   "List of overlays used in the current buffer.")
 
+(defvar flycheck-overlay--debounce-timer nil
+  "Timer used for debouncing error checks.")
+
 (defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\)"
   "Regex used to mark quotes.")
 
@@ -115,6 +118,11 @@ Based on foreground color"
 (defcustom flycheck-overlay-debug nil
   "Enable debug messages for flycheck-overlay."
  :type 'boolean
+ :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-debounce-interval 0.5
+  "Time in seconds to wait before checking and displaying errors after a change."
+  :type 'number
   :group 'flycheck-overlay)
 
 (defun flycheck-overlay--sort-errors (errors)
@@ -388,18 +396,23 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--enable ()
   "Enable Flycheck overlay mode."
   (add-hook 'flycheck-after-syntax-check-hook
-            #'flycheck-overlay--maybe-display-errors nil t)
+            #'flycheck-overlay--maybe-display-errors-debounced nil t)
   (add-hook 'after-change-functions
             #'flycheck-overlay--handle-buffer-changes nil t)
   (when flycheck-current-errors
-    (flycheck-overlay--maybe-display-errors)))
+    (flycheck-overlay--maybe-display-errors-debounced)))
 
 (defun flycheck-overlay--disable ()
   "Disable Flycheck overlay mode."
+  (when flycheck-overlay--debounce-timer
+    (cancel-timer flycheck-overlay--debounce-timer)
+    (setq flycheck-overlay--debounce-timer nil))
   (remove-hook 'flycheck-after-syntax-check-hook
-               #'flycheck-overlay--maybe-display-errors t)
+               #'flycheck-overlay--maybe-display-errors-debounced t)
   (remove-hook 'after-change-functions
                #'flycheck-overlay--handle-buffer-changes t)
+
+  (setq flycheck-overlay--debounce-timer nil))
 
   (save-restriction
     (widen)
@@ -415,6 +428,19 @@ Ignores colons that appear within quotes or parentheses."
         (when (and (overlayp ov)
                    (= (line-number-at-pos (overlay-start ov)) current-line))
           (delete-overlay ov)))))))
+
+(defun flycheck-overlay--maybe-display-errors-debounced ()
+  "Debounced version of `flycheck-overlay--maybe-display-errors`."
+  (condition-case err
+      (progn
+        (when flycheck-overlay--debounce-timer
+          (cancel-timer flycheck-overlay--debounce-timer))
+        (setq flycheck-overlay--debounce-timer
+              (run-with-idle-timer flycheck-overlay-debounce-interval nil
+                                   #'flycheck-overlay--maybe-display-errors)))
+    (error
+     (message "Error in debounced display: %S" err)
+     (setq flycheck-overlay--debounce-timer nil))))
 
 (defun flycheck-overlay--handle-buffer-changes (&rest _)
   "Handle buffer modifications by clearing overlays on the current line while editing."
