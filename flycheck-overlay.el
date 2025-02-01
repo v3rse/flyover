@@ -309,7 +309,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
   (delete-overlay overlay))
 
 (defun flycheck-overlay--create-overlay-string (col-pos virtual-line indicator marked-string existing-bg)
-  "Create the overlay string. Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG.  "
+  "Create the overlay string.
+Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
               (concat indicator marked-string)
