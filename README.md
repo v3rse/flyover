@@ -99,7 +99,11 @@ You can customize the icons used for different types of Flycheck messages in the
 (setq flycheck-overlay-warning-icon "⚠")
 (setq flycheck-overlay-error-icon "✘")
 
+;;; Virtual line icon/string
+(setq flycheck-overlay-virtual-line-icon "╰──►")
+
 ;;; Icon padding
+
 ;;; You might want to adjust this setting if you icons are not centererd or if you more or less space.fs
 (setq flycheck-overlay-icon-left-padding 0.9)
 (setq flycheck-overlay-icon-right-padding 0.9)
@@ -116,6 +120,9 @@ You can customize the icons used for different types of Flycheck messages in the
 
 ;;; Hide overlay when cursor is at same line good for shot-at-eol.
 (setq flycheck-overlay-hide-when-cusor-is-on-same-line t) 
+
+;;; Show an arrow (or icon of your choice) before the error to highlight the error a bit more.
+(setq flycheck-overlay-show-virtual-line t) 
 
 ```
 
