@@ -84,6 +84,11 @@
   :type 'string
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-virtual-line-icon "╰──►"
+  "Icon used for the virtual line."
+  :type 'string
+  :group 'flycheck-overlay)
+
 (defcustom flycheck-overlay-percent-darker 50
   "Icon background percent darker.
 Based on foreground color"
@@ -102,6 +107,11 @@ Based on foreground color"
 
 (defcustom flycheck-overlay-hide-checker-name t
   "Hide the checker name in the error message."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-show-virtual-line t
+  "Show a virtual line to highlight the error a bit more"
   :type 'boolean
   :group 'flycheck-overlay)
 
@@ -265,6 +275,9 @@ REGION should be a cons cell (BEG . END) of buffer positions."
          (existing-bg (face-background face nil t))
          (indicator (flycheck-overlay--get-indicator face))
          (display-msg (concat " " msg " "))
+         (virtual-line (if flycheck-overlay-show-virtual-line
+                           (propertize flycheck-overlay-virtual-line-icon
+                                       'face `(:foreground ,(face-foreground face nil t)))))
          (display-string (propertize display-msg
                                      'face face
                                      'cursor-sensor-functions nil
@@ -274,7 +287,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                          :input display-string
                          :regex flycheck-overlay-regex-mark-quotes
                          :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
-         (overlay-string (flycheck-overlay--create-overlay-string col-pos indicator marked-string existing-bg)))
+         (overlay-string (flycheck-overlay--create-overlay-string col-pos virtual-line indicator marked-string existing-bg)))
     (if (and flycheck-overlay-show-at-eol
              (< (+ col-pos (length display-msg)) (window-width)))
         (overlay-put overlay 'after-string (propertize overlay-string
@@ -295,13 +308,12 @@ REGION should be a cons cell (BEG . END) of buffer positions."
   "Clear OVERLAY when the buffer is modified."
   (delete-overlay overlay))
 
-(defun flycheck-overlay--create-overlay-string (col-pos indicator marked-string existing-bg)
-  "Create the overlay string.
-Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
+(defun flycheck-overlay--create-overlay-string (col-pos virtual-line indicator marked-string existing-bg)
+  "Create the overlay string. Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG.  "
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
-              (concat " " indicator marked-string)
-            (concat " " (make-string col-pos ?\s) indicator marked-string))
+              (concat indicator marked-string)
+            (concat "  " (make-string col-pos ?\s) virtual-line indicator marked-string))
    :regex flycheck-overlay-regex-mark-parens
    :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
@@ -413,12 +425,10 @@ Ignores colons that appear within quotes or parentheses."
                #'flycheck-overlay--maybe-display-errors-debounced t)
   (remove-hook 'after-change-functions
                #'flycheck-overlay--handle-buffer-changes t)
-
-  (setq flycheck-overlay--debounce-timer nil))
-
+  (setq flycheck-overlay--debounce-timer nil)
   (save-restriction
     (widen)
-    (flycheck-overlay--clear-overlays))
+    (flycheck-overlay--clear-overlays)))
 
 (defun flycheck-overlay--maybe-display-errors ()
   "Display errors except on current line."
