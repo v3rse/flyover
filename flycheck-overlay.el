@@ -32,8 +32,8 @@
 (defvar flycheck-overlay--debounce-timer nil
   "Timer used for debouncing error checks.")
 
-(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\)"
-  "Regex used to mark quotes.")
+(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\|\"[^\"]+\"\\)"
+  "Regex used to mark both single and double quoted text.")
 
 (defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
   "Regex used to mark parentheses.")
