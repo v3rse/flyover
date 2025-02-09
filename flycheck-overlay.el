@@ -219,7 +219,8 @@ This function filters out invalid errors and sorts the remaining ones."
 (defun flycheck-overlay--get-safe-position (line column)
   "Get a safe buffer position for LINE and COLUMN.
 LINE and COLUMN are 1-based positions in the buffer.
-Returns a buffer position that is guaranteed to be within bounds."
+Returns a buffer position that is guaranteed to be within bounds.
+When COLUMN is 0 or nil, finds first non-whitespace character on the line."
   (save-restriction
     (widen)
     (save-excursion
@@ -228,17 +229,21 @@ Returns a buffer position that is guaranteed to be within bounds."
             (goto-char (point-min))
             (when (and line (numberp line) (>= line 0))
               (forward-line (1- line)))
-            (when (and column (numberp column) (>= column 0))
-              (forward-char (min (1- column)
-                                 (- (line-end-position) (point)))))
+            (if (or (null column) (= column 0))
+                (progn
+                  (beginning-of-line)
+                  (skip-chars-forward " \t"))
+              (when (and (numberp column) (> column 0))
+                (forward-char (min (1- column)
+                                 (- (line-end-position) (point))))))
+            ;; Returnera den resulterande positionen
             (let ((pos (point)))
-              (when flycheck-overlay-debug
-                (message "Debug: Calculated position: %d" pos))
               pos))
         (error
          (when flycheck-overlay-debug
            (message "Debug: Error in get-safe-position: %S" err))
          (point-min))))))
+
 
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR.
