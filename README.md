@@ -117,27 +117,22 @@ You can customize the appearance of the error indicators using various line and 
 (setq flycheck-overlay-virtual-line-icon "╰──")
 ```
 
-Available styles include:
-
-Basic styles (no arrow):
-- `nil` - No indicator
-- `line-no-arrow` - Straight line (└──)
-- `curved-line-no-arrow` - Curved line (╰──)
-- `double-line-no-arrow` - Double line (╚══)
-- `bol (┗━━)
-- `dotted-line-no-arrow` - Dotted line (└┈┈)
-
-Straight variants with arrow:
-- `straight-arrow` - Straight line with arrow (└──►)
-- `double-line-arrow` - Double line with arrow (╚══►)
-- `bold-arrow` - Bold line with arrow (┗━━►)
-- `dotted-arrow` - Dotted line with arrow (└┈┈►)
-
-Curved variants with arrow:
-- `curved-arrow` - Curved line with arrow (╰──►)
-- `curved-bold-arrow` - Curved bold line with arrow (╰━━►)
-- `curved-double-arrow` - Curved double line with arrow (╰══►)
-- `curved-dotted-arrow` - Curved dotted line with arrow (╰┈┈►)
+| Style Name | Display | Description |
+|------------|----------|-------------|
+| `nil` | | No indicator |
+| `line-no-arrow` | └── | Straight line |
+| `curved-line-no-arrow` | ╰── | Curved line |
+| `double-line-no-arrow` | ╚══ | Double line |
+| `bol` | ┗━━ | Bold line |
+| `dotted-line-no-arrow` | └┈┈ | Dotted line |
+| `straight-arrow` | └──► | Straight line with arrow |
+| `double-line-arrow` | ╚══► | Double line with arrow |
+| `bold-arrow` | ┗━━► | Bold line with arrow |
+| `dotted-arrow` | └┈┈► | Dotted line with arrow |
+| `curved-arrow` | ╰──► | Curved line with arrow |
+| `curved-bold-arrow` | ╰━━► | Curved bold line with arrow |
+| `curved-double-arrow` | ╰══► | Curved double line with arrow |
+| `curved-dotted-arrow` | ╰┈┈► | Curved dotted line with arrow |
 
 
 ### Visibility settings
