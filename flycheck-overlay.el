@@ -32,11 +32,14 @@
 (defvar flycheck-overlay--debounce-timer nil
   "Timer used for debouncing error checks.")
 
-(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\|\"[^\"]+\"\\)"
+(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
   "Regex used to mark both single and double quoted text.")
 
 (defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
   "Regex used to mark parentheses.")
+
+(defvar flycheck-overlay-checker-regex "^[^\"'(]*?:\\(.*\\)"
+  "Regex used to match the checker name at the start of the error message.")
 
 (defface flycheck-overlay-error
   '((t :background "#453246"
@@ -374,7 +377,7 @@ Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
               (concat indicator marked-string)
-            (concat "  " (make-string col-pos ?\s) virtual-line indicator marked-string))
+            (concat (make-string col-pos ?\s) virtual-line indicator marked-string))
    :regex flycheck-overlay-regex-mark-parens
    :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
@@ -423,7 +426,7 @@ Ignores colons that appear within quotes or parentheses."
     (let ((case-fold-search nil))
       ;; Match start of string, followed by any characters except quotes/parens,
       ;; followed by a colon, capturing everything after
-      (if (string-match "^[^\"'(]*?:\\(.*\\)" (replace-curly-quotes msg))
+      (if (string-match flycheck-overlay-checker-regex (replace-curly-quotes msg))
           (setq msg (string-trim (match-string 1 msg))))))
   msg)
 
