@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.3.8
+;; Version: 0.3.9
 ;; Package-Requires: ((emacs "25.1") (flycheck "0.23") (cl-lib "0.5"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
