@@ -84,7 +84,7 @@
   :type 'string
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-virtual-line-icon "╰──►"
+(defcustom flycheck-overlay-virtual-line-icon nil
   "Icon used for the virtual line."
   :type 'string
   :group 'flycheck-overlay)
@@ -134,6 +134,66 @@ Based on foreground color"
   "Time in seconds to wait before checking and displaying errors after a change."
   :type 'number
   :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-virtual-line-type 'curved-dotted-arrow
+  "Arrow used to point to the error.
+Provides various line styles including straight, curved, bold, and dotted variations,
+with and without arrow terminators."
+  :type '(choice
+          ;; Basic styles (no arrow)
+          (const :tag "No indicator" nil)
+          (const :tag "Straight line" line-no-arrow)
+          (const :tag "Curved line" curved-line-no-arrow)
+          (const :tag "Double line" double-line-no-arrow)
+          (const :tag "Bold line" bold-line-no-arrow)
+          (const :tag "Dotted line" dotted-line-no-arrow)
+          
+          ;; Straight variants with arrow
+          (const :tag "Straight line + arrow" straight-arrow)
+          (const :tag "Double line + arrow" double-line-arrow)
+          (const :tag "Bold line + arrow" bold-arrow)
+          (const :tag "Dotted line + arrow" dotted-arrow)
+          
+          ;; Curved variants with arrow
+          (const :tag "Curved line + arrow" curved-arrow)
+          (const :tag "Curved bold + arrow" curved-bold-arrow)
+          (const :tag "Curved double + arrow" curved-double-arrow)
+          (const :tag "Curved dotted + arrow" curved-dotted-arrow))
+  :group 'flycheck-overlay)
+
+(defun flycheck-overlay-get-arrow-type ()
+  "Return the arrow character based on the selected style."
+  (pcase flycheck-overlay-virtual-line-type
+    ;; Basic styles (no arrow)
+    ('line-no-arrow "└──")
+    ('curved-line-no-arrow "╰──")
+    ('double-line-no-arrow "╚══")
+    ('bold-line-no-arrow "┗━━")
+    ('dotted-line-no-arrow "└┈┈")
+    
+    ;; Straight variants with arrow
+    ('straight-arrow "└──►")
+    ('double-line-arrow "╚══►")
+    ('bold-arrow "┗━━►")
+    ('dotted-arrow "└┈┈►")
+    
+    ;; Curved variants with arrow
+    ('curved-arrow "╰──►")
+    ('curved-bold-arrow "╰━━►")
+    ('curved-double-arrow "╰══►")
+    ('curved-dotted-arrow "╰┈┈►")
+    
+    ;; Default/fallback
+    ('no-arrow "")
+    (_ "→")))
+
+(defun flycheck-overlay-get-arrow ()
+  "Return the arrow character based on the selected style."
+  (if (not flycheck-overlay-show-virtual-line)
+      ""
+    (if (not flycheck-overlay-virtual-line-icon)
+        (flycheck-overlay-get-arrow-type)
+      flycheck-overlay-virtual-line-icon)))
 
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions.
@@ -250,7 +310,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
          (face-name (cdr props))
          (height (face-attribute face-name :height))
          (color (face-attribute face-name :foreground))
-         (bg-color (flycheck-overay--darken-color color flycheck-overlay-percent-darker)))
+         (bg-color (flycheck-overlay--darken-color color flycheck-overlay-percent-darker)))
     
     (concat
      ;; Left padding
@@ -276,8 +336,8 @@ REGION should be a cons cell (BEG . END) of buffer positions."
          (indicator (flycheck-overlay--get-indicator face))
          (display-msg (concat " " msg " "))
          (virtual-line (if flycheck-overlay-show-virtual-line
-                           (propertize flycheck-overlay-virtual-line-icon
-                                       'face `(:foreground ,(face-foreground face nil t)))))
+                           (propertize (flycheck-overlay-get-arrow)
+                            'face `(:foreground ,(face-foreground face nil t)))))
          (display-string (propertize display-msg
                                      'face face
                                      'cursor-sensor-functions nil
@@ -481,7 +541,7 @@ Ignores colons that appear within quotes or parentheses."
   "Convert R G B components to hex color string."
   (format "#%02x%02x%02x" r g b))
 
-(defun flycheck-overay--darken-color (color percent)
+(defun flycheck-overlay--darken-color (color percent)
   "Darken COLOR by PERCENT."
   (let* ((rgb (flycheck-overlay--color-to-rgb color))
          (darkened (mapcar (lambda (component)
