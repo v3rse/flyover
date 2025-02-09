@@ -114,7 +114,7 @@ You can customize the appearance of the error indicators using various line and 
 (setq flycheck-overlay-virtual-line-type 'curved-dotted-arrow)
 
 ;;; Overide virtual-line-type with your own
-(setq flycheck-overlay-virtual-line-icon "╰──")
+(setq flycheck-overlay-virtual-line-icon "╰──") ;;; default its nil
 ```
 
 | Style Name | Display | Description |
@@ -129,7 +129,7 @@ You can customize the appearance of the error indicators using various line and 
 | `double-line-arrow` | ╚══► | Double line with arrow |
 | `bold-arrow` | ┗━━► | Bold line with arrow |
 | `dotted-arrow` | └┈┈► | Dotted line with arrow |
-| `curved-arrow` | ╰──► | Curved line with arrow |
+| `curved-arrow` | ╰──► | Curved line with arrow (default) |
 | `curved-bold-arrow` | ╰━━► | Curved bold line with arrow |
 | `curved-double-arrow` | ╰══► | Curved double line with arrow |
 | `curved-dotted-arrow` | ╰┈┈► | Curved dotted line with arrow |
