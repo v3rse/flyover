@@ -99,15 +99,46 @@ You can customize the icons used for different types of Flycheck messages in the
 (setq flycheck-overlay-warning-icon "⚠")
 (setq flycheck-overlay-error-icon "✘")
 
-;;; Virtual line icon/string
-(setq flycheck-overlay-virtual-line-icon "╰──►")
-
 ;;; Icon padding
 
 ;;; You might want to adjust this setting if you icons are not centererd or if you more or less space.fs
 (setq flycheck-overlay-icon-left-padding 0.9)
 (setq flycheck-overlay-icon-right-padding 0.9)
 ```
+
+### Customizing Error Indicators
+
+You can customize the appearance of the error indicators using various line and arrow styles through the `flycheck-overlay-virtual-line-type` variable:
+
+```elisp
+(setq flycheck-overlay-virtual-line-type 'curved-dotted-arrow)
+
+;;; Overide virtual-line-type with your own
+(setq flycheck-overlay-virtual-line-icon "╰──")
+```
+
+Available styles include:
+
+Basic styles (no arrow):
+- `nil` - No indicator
+- `line-no-arrow` - Straight line (└──)
+- `curved-line-no-arrow` - Curved line (╰──)
+- `double-line-no-arrow` - Double line (╚══)
+- `bol (┗━━)
+- `dotted-line-no-arrow` - Dotted line (└┈┈)
+
+Straight variants with arrow:
+- `straight-arrow` - Straight line with arrow (└──►)
+- `double-line-arrow` - Double line with arrow (╚══►)
+- `bold-arrow` - Bold line with arrow (┗━━►)
+- `dotted-arrow` - Dotted line with arrow (└┈┈►)
+
+Curved variants with arrow:
+- `curved-arrow` - Curved line with arrow (╰──►)
+- `curved-bold-arrow` - Curved bold line with arrow (╰━━►)
+- `curved-double-arrow` - Curved double line with arrow (╰══►)
+- `curved-dotted-arrow` - Curved dotted line with arrow (╰┈┈►)
+
 
 ### Visibility settings
 
