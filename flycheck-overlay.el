@@ -221,27 +221,29 @@ This function filters out invalid errors and sorts the remaining ones."
 LINE and COLUMN are 1-based positions in the buffer.
 Returns a buffer position that is guaranteed to be within bounds.
 When COLUMN is 0 or nil, finds first non-whitespace character on the line."
+  (when (or (null line) (not (numberp line)))
+    (setq line 1))
+  (when (or (null column) (not (numberp column)))
+    (setq column 0))
   (save-restriction
     (widen)
     (save-excursion
       (condition-case err
           (progn
             (goto-char (point-min))
-            (when (and line (numberp line) (>= line 0))
+            (when (>= line 0)
               (forward-line (1- line)))
-            (if (or (null column) (= column 0))
+            (if (<= column 0)
                 (progn
                   (beginning-of-line)
                   (skip-chars-forward " \t"))
-              (when (and (numberp column) (> column 0))
-                (forward-char (min (1- column)
-                                 (- (line-end-position) (point))))))
-            ;; Returnera den resulterande positionen
-            (let ((pos (point)))
-              pos))
+              (forward-char (min (1- column)
+                               (- (line-end-position) (point)))))
+            (point))
         (error
          (when flycheck-overlay-debug
-           (message "Debug: Error in get-safe-position: %S" err))
+           (message "Debug: Error in get-safe-position: %S for line %S col %S" 
+                    err line column))
          (point-min))))))
 
 
