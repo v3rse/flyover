@@ -14,9 +14,9 @@
 
 ;;; Code:
 
-(define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
-  "Temporarily disable overlay sorting to debug issues."
-  nil)
+;; (define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
+;;   "Temporarily disable overlay sorting to debug issues."
+;;   nil)
 
 (require 'flycheck)
 (require 'cl-lib)
