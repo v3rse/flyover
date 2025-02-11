@@ -3,8 +3,8 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.4.0
-;; Package-Requires: ((emacs "25.1") (flycheck "0.23") (cl-lib "0.5"))
+;; Version: 0.5.0
+;; Package-Requires: ((emacs "26.1") (flycheck "0.23") (cl-lib "0.5"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
 
@@ -431,7 +431,7 @@ ERROR is the optional original flycheck error object."
 
 (defun flycheck-overlay--create-overlay-string (col-pos virtual-line indicator marked-string existing-bg)
   "Create the overlay string.
-Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
+Based on COL-POS, VIRTUAL-LINE, INDICATOR, MARKED-STRING, and EXISTING-BG."
   (flycheck-overlay--mark-all-symbols
    :input (if flycheck-overlay-show-at-eol
               (concat indicator marked-string)
@@ -439,7 +439,7 @@ Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
    :regex flycheck-overlay-regex-mark-parens
    :property `(:inherit flycheck-overlay-marker :background ,existing-bg)))
 
-(defun replace-curly-quotes (text)
+(defun flycheck-overlay-replace-curly-quotes (text)
   "Replace curly quotes with straight quotes in TEXT."
   (replace-regexp-in-string "[“”]" "\""
     (replace-regexp-in-string "[‘’]" "'" text)))
@@ -447,7 +447,7 @@ Based on COL-POS, INDICATOR, MARKED-STRING, and EXISTING-BG."
 (cl-defun flycheck-overlay--mark-all-symbols (&key input regex property)
   "Highlight all symbols matching REGEX in INPUT with specified PROPERTY."
   (save-match-data
-    (setq input (replace-curly-quotes input))  ; Replace curly quotes with straight quotes
+    (setq input (flycheck-overlay-replace-curly-quotes input))  ; Replace curly quotes with straight quotes
     (let ((pos 0))
       (while (string-match regex input pos)
         (let* ((start (match-beginning 1))
@@ -484,7 +484,7 @@ Ignores colons that appear within quotes or parentheses."
     (let ((case-fold-search nil))
       ;; Match start of string, followed by any characters except quotes/parens,
       ;; followed by a colon, capturing everything after
-      (if (string-match flycheck-overlay-checker-regex (replace-curly-quotes msg))
+      (if (string-match flycheck-overlay-checker-regex (flycheck-overlay-replace-curly-quotes msg))
           (setq msg (string-trim (match-string 1 msg))))))
   msg)
 
