@@ -19,12 +19,20 @@
   nil)
 
 (require 'flycheck)
+(require 'flymake)
 (require 'cl-lib)
 
 (defgroup flycheck-overlay nil
-  "Display Flycheck errors using overlays."
+  "Display Flycheck/Flymake errors using overlays."
   :prefix "flycheck-overlay-"
-  :group 'flycheck)
+  :group 'tools)
+
+(defcustom flycheck-overlay-checkers '(flycheck flymake)
+  "Which syntax checkers to use.
+List can include 'flycheck and/or 'flymake."
+  :type '(set (const :tag "Flycheck" flycheck)
+              (const :tag "Flymake" flymake))
+  :group 'flycheck-overlay)
 
 (defvar-local flycheck-overlay--overlays nil
   "List of overlays used in the current buffer.")
@@ -203,6 +211,42 @@ with and without arrow terminators."
     (if (not flycheck-overlay-virtual-line-icon)
         (flycheck-overlay-get-arrow-type)
       flycheck-overlay-virtual-line-icon)))
+
+(defun flycheck-overlay--get-flymake-diagnostics ()
+  "Get all current Flymake diagnostics for this buffer."
+  (when (and (memq 'flymake flycheck-overlay-checkers)
+             (bound-and-true-p flymake-mode))
+    (flymake-diagnostics)))
+
+(defun flycheck-overlay--convert-flymake-diagnostic (diag)
+  "Convert a Flymake DIAG to Flycheck error format."
+  (let* ((beg (flymake-diagnostic-beg diag))
+         (type (flymake-diagnostic-type diag))
+         (text (flymake-diagnostic-text diag))
+         (level (pcase type
+                 ('flymake-error 'error)
+                 ('flymake-warning 'warning)
+                 ('flymake-note 'info)
+                 (_ 'warning))))
+    (flycheck-error-new-at
+     (line-number-at-pos beg)
+     (save-excursion
+       (goto-char beg)
+       (current-column))
+     level
+     text)))
+
+(defun flycheck-overlay--get-all-errors ()
+  "Get all errors from enabled checkers."
+  (let (all-errors)
+    (when (memq 'flycheck flycheck-overlay-checkers)
+      (setq all-errors (append all-errors flycheck-current-errors)))
+    (when (memq 'flymake flycheck-overlay-checkers)
+      (setq all-errors
+            (append all-errors
+                    (mapcar #'flycheck-overlay--convert-flymake-diagnostic
+                            (flycheck-overlay--get-flymake-diagnostics)))))
+    all-errors))
 
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions.
@@ -450,7 +494,7 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
   (condition-case display-err
-      (let ((errs (flycheck-overlay--sort-errors (or errors flycheck-current-errors))))
+      (let ((errs (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))))
         (when (listp errs)
           (flycheck-overlay--clear-overlays)  ; Clear existing overlays
           (dolist (err (delq nil errs))  ; Filter out nil values
@@ -489,21 +533,28 @@ Ignores colons that appear within quotes or parentheses."
     (flycheck-overlay--disable)))
 
 (defun flycheck-overlay--enable ()
-  "Enable Flycheck overlay mode."
-  (add-hook 'flycheck-after-syntax-check-hook
-            #'flycheck-overlay--maybe-display-errors-debounced nil t)
+  "Enable Flycheck/Flymake overlay mode."
+  (when (memq 'flycheck flycheck-overlay-checkers)
+    (add-hook 'flycheck-after-syntax-check-hook
+              #'flycheck-overlay--maybe-display-errors-debounced nil t))
+  (when (memq 'flymake flycheck-overlay-checkers)
+    (add-hook 'flymake-diagnostic-functions
+              #'flycheck-overlay--maybe-display-errors-debounced nil t))
   (add-hook 'after-change-functions
             #'flycheck-overlay--handle-buffer-changes nil t)
-  (when flycheck-current-errors
-    (flycheck-overlay--maybe-display-errors-debounced)))
+  (flycheck-overlay--maybe-display-errors-debounced))
 
 (defun flycheck-overlay--disable ()
-  "Disable Flycheck overlay mode."
+  "Disable Flycheck/Flymake overlay mode."
   (when flycheck-overlay--debounce-timer
     (cancel-timer flycheck-overlay--debounce-timer)
     (setq flycheck-overlay--debounce-timer nil))
-  (remove-hook 'flycheck-after-syntax-check-hook
-               #'flycheck-overlay--maybe-display-errors-debounced t)
+  (when (memq 'flycheck flycheck-overlay-checkers)
+    (remove-hook 'flycheck-after-syntax-check-hook
+                 #'flycheck-overlay--maybe-display-errors-debounced t))
+  (when (memq 'flymake flycheck-overlay-checkers)
+    (remove-hook 'flymake-diagnostic-functions
+                 #'flycheck-overlay--maybe-display-errors-debounced t))
   (remove-hook 'after-change-functions
                #'flycheck-overlay--handle-buffer-changes t)
   (setq flycheck-overlay--debounce-timer nil)
