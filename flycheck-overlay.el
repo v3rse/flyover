@@ -14,9 +14,9 @@
 
 ;;; Code:
 
-;; (define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
-;;   "Temporarily disable overlay sorting to debug issues."
-;;   nil)
+(define-advice flycheck-overlays-in (:override (_ _) disable-sorting)
+  "Temporarily disable overlay sorting to debug issues."
+  nil)
 
 (require 'flycheck)
 (require 'cl-lib)
@@ -32,8 +32,14 @@
 (defvar flycheck-overlay--debounce-timer nil
   "Timer used for debouncing error checks.")
 
-(defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
-  "Regex used to mark both single and double quoted text.")
+;; (defvar flycheck-overlay-regex-mark-quotes "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
+;;   "Regex used to mark both single and double quoted text.")
+
+(defvar flycheck-overlay-regex-mark-quotes
+  (concat "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"  ; Regex for quoted strings
+          "\\|"                                      ; OR-operator
+          ".*?: \\(.*\\)")                           ; Regex for everything after a colon
+  "Regex to match quoted strings or everything after a colon.")
 
 (defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
   "Regex used to mark parentheses.")
