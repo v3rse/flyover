@@ -28,8 +28,8 @@
   :group 'tools)
 
 (defcustom flycheck-overlay-checkers '(flycheck flymake)
-  "Which syntax checkers to use.
-List can include 'flycheck and/or 'flymake."
+  "Checkers to use for displaying errors.
+Supported values are `flycheck` and `flymake`."
   :type '(set (const :tag "Flycheck" flycheck)
               (const :tag "Flymake" flymake))
   :group 'flycheck-overlay)
@@ -125,7 +125,7 @@ Based on foreground color"
   :group 'flycheck-overlay)
 
 (defcustom flycheck-overlay-show-virtual-line t
-  "Show a virtual line to highlight the error a bit more"
+  "Show a virtual line to highlight the error a bit more."
   :type 'boolean
   :group 'flycheck-overlay)
 
@@ -289,7 +289,7 @@ When COLUMN is 0 or nil, finds first non-whitespace character on the line."
             (point))
         (error
          (when flycheck-overlay-debug
-           (message "Debug: Error in get-safe-position: %S for line %S col %S" 
+           (message "Debug: Error in get-safe-position: %S for line %S col %S"
                     err line column))
          (point-min))))))
 
@@ -387,7 +387,7 @@ ERROR is the optional original flycheck error object."
                  'display '(space :width flycheck-overlay-icon-right-padding)))))
 
 (defun flycheck-overlay--configure-overlay (overlay face msg beg error)
-  "Configure the OVERLAY with FACE and MSG starting at BEG."
+  "Configure OVERLAY with FACE, MSG, and BEG and ERROR."
   (overlay-put overlay 'flycheck-overlay t)
   (let* ((col-pos (save-excursion
                     (goto-char beg)
@@ -463,18 +463,6 @@ Based on COL-POS, VIRTUAL-LINE, INDICATOR, MARKED-STRING, and EXISTING-BG."
   (delq nil (mapcar (lambda (ov)
                       (overlay-get ov 'flycheck-overlay))
                     (overlays-at pos))))
-
-(defun flycheck-display-error-at-point ()
-  "Display the Flycheck error at point, if any."
-  (let ((errors (flycheck-overlay-errors-at (point))))
-    (when errors
-      (let ((messages (delq nil (mapcar (lambda (err)
-                                          (when (flycheck-error-p err)
-                                            (flycheck-error-format-message-and-id err)))
-                                        errors))))
-        (when messages
-          (flycheck-display-error-messages messages))))))
-
 
 (defun flycheck-overlay--remove-checker-name (msg)
   "Remove checker name prefix from (as MSG).
