@@ -280,10 +280,11 @@ Returns a cons cell (START . END) representing the region."
        (message "Debug region: Error getting region: %S" region-err))
      nil)))
 
-(defun flycheck-overlay--create-overlay (region type msg error)
-  "Create an overlay at REGION of TYPE with message MSG.
+(defun flycheck-overlay--create-overlay (region level msg &optional error)
+  "Create an overlay at REGION with LEVEL and message MSG.
 REGION should be a cons cell (BEG . END) of buffer positions.
-ERROR is the original flycheck error object."
+LEVEL is the error level (error, warning, or info).
+ERROR is the optional original flycheck error object."
   (condition-case ov-err
       (when (and region (consp region)
                  (integer-or-marker-p (car region))
@@ -296,12 +297,13 @@ ERROR is the original flycheck error object."
                                     (progn
                                       (goto-char end)
                                       (line-beginning-position 2)))))
-               (face (flycheck-overlay--get-face type))
+               (face (flycheck-overlay--get-face level))
                (overlay (make-overlay beg next-line-beg nil t nil)))
           (flycheck-overlay--configure-overlay overlay face msg beg error)
           overlay))
     (error
-     (message "Error creating overlay: %S" ov-err)
+     (when flycheck-overlay-debug
+       (message "Error creating overlay: %S" ov-err))
      nil)))
 
 (defun flycheck-overlay--get-face (type)
@@ -460,7 +462,7 @@ Ignores colons that appear within quotes or parentheses."
                     (when flycheck-overlay-debug
                       (message "Debug: level=%S msg=%S region=%S" level msg region))
                     (when (and region (car region) (cdr region) msg)
-                      (let ((overlay (flycheck-overlay--create-overlay region level msg)))
+                      (let ((overlay (flycheck-overlay--create-overlay region level msg err)))
                         (when overlay
                           (push overlay flycheck-overlay--overlays)))))
                 (error
