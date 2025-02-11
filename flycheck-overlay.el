@@ -280,9 +280,10 @@ Returns a cons cell (START . END) representing the region."
        (message "Debug region: Error getting region: %S" region-err))
      nil)))
 
-(defun flycheck-overlay--create-overlay (region type msg)
+(defun flycheck-overlay--create-overlay (region type msg error)
   "Create an overlay at REGION of TYPE with message MSG.
-REGION should be a cons cell (BEG . END) of buffer positions."
+REGION should be a cons cell (BEG . END) of buffer positions.
+ERROR is the original flycheck error object."
   (condition-case ov-err
       (when (and region (consp region)
                  (integer-or-marker-p (car region))
@@ -297,7 +298,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                                       (line-beginning-position 2)))))
                (face (flycheck-overlay--get-face type))
                (overlay (make-overlay beg next-line-beg nil t nil)))
-          (flycheck-overlay--configure-overlay overlay face msg beg)
+          (flycheck-overlay--configure-overlay overlay face msg beg error)
           overlay))
     (error
      (message "Error creating overlay: %S" ov-err)
@@ -342,7 +343,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                  'face `(:background ,bg-color, :height ,height)
                  'display '(space :width flycheck-overlay-icon-right-padding)))))
 
-(defun flycheck-overlay--configure-overlay (overlay face msg beg)
+(defun flycheck-overlay--configure-overlay (overlay face msg beg error)
   "Configure the OVERLAY with FACE and MSG starting at BEG."
   (overlay-put overlay 'flycheck-overlay t)
   (let* ((col-pos (save-excursion
@@ -378,6 +379,7 @@ REGION should be a cons cell (BEG . END) of buffer positions."
                                                      'field nil)))
     (overlay-put overlay 'evaporate t)
     (overlay-put overlay 'priority 1000)
+    (overlay-put overlay 'flycheck-error error)
     (overlay-put overlay 'modification-hooks '(flycheck-overlay--clear-overlay-on-modification))))
 
 (defun flycheck-overlay--clear-overlay-on-modification (overlay &rest _)
