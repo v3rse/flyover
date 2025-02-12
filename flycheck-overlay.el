@@ -248,20 +248,30 @@ with and without arrow terminators."
 (defun flycheck-overlay--sort-errors (errors)
   "Safely sort ERRORS by their buffer positions.
 This function filters out invalid errors and sorts the remaining ones."
-  (condition-case nil
-      (let ((sorted-errors
-             (seq-filter
-              (lambda (err)
-                (and (flycheck-error-p err)
-                     (let ((line (flycheck-error-line err))
-                           (column (flycheck-error-column err)))
-                       (and (numberp line) (>= line 0)
-                            (or (not column) (and (numberp column) (>= column 0)))))))
-              errors)))
+  (condition-case sort-err
+      (if (and errors (listp errors) (not (eq errors t)))
+          (let ((sorted-errors
+                 (seq-filter
+                  (lambda (err)
+                    (and err
+                         (not (eq err t))
+                         (flycheck-error-p err)
+                         (let ((line (flycheck-error-line err))
+                               (column (flycheck-error-column err)))
+                           (and (numberp line) (>= line 0)
+                                (or (not column) 
+                                    (and (numberp column) (>= column 0)))))))
+                  errors)))
+            (when flycheck-overlay-debug
+              (message "Debug: Sorted errors: %S" sorted-errors))
+            sorted-errors)
         (when flycheck-overlay-debug
-          (message "Debug: Sorted errors: %S" sorted-errors))
-        sorted-errors)
-    (error errors)))
+          (message "Debug: Invalid errors input: %S" errors))
+        nil)
+    (error
+     (when flycheck-overlay-debug
+       (message "Debug: Error sorting errors: %S for input: %S" sort-err errors))
+     nil)))
 
 (defun flycheck-overlay--get-safe-position (line column)
   "Get a safe buffer position for LINE and COLUMN.
@@ -480,24 +490,26 @@ Ignores colons that appear within quotes or parentheses."
   "Display ERRORS using overlays."
   (condition-case display-err
       (let ((errs (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))))
-        (when (listp errs)
+        (when (and (listp errs) (not (eq errs t)))  ; Ensure errs is a proper list
           (flycheck-overlay--clear-overlays)  ; Clear existing overlays
-          (dolist (err (delq nil errs))  ; Filter out nil values
-            (when (flycheck-error-p err)  ; Ensure err is a valid flycheck-error
+          (dolist (err errs)
+            (when (and err (flycheck-error-p err))  ; Extra validation
               (condition-case err-handler
-                  (let* ((level (flycheck-error-level err))
-                         (msg (flycheck-overlay--remove-checker-name (flycheck-error-message err)))
-                         (region (flycheck-overlay--get-error-region err)))
-                    (when flycheck-overlay-debug
-                      (message "Debug: level=%S msg=%S region=%S" level msg region))
-                    (when (and region (car region) (cdr region) msg)
+                  (let* ((level (and (flycheck-error-p err) (flycheck-error-level err)))
+                         (msg (and level (flycheck-error-message err)))
+                         (msg (and msg (flycheck-overlay--remove-checker-name msg)))
+                         (region (and msg (flycheck-overlay--get-error-region err))))
+                    (when (and level msg region (car region) (cdr region))
                       (let ((overlay (flycheck-overlay--create-overlay region level msg err)))
                         (when overlay
                           (push overlay flycheck-overlay--overlays)))))
                 (error
-                 (message "Debug: Error handling individual error: %S" err-handler)))))))
+                 (when flycheck-overlay-debug
+                   (message "Debug: Error handling individual error: %S for error: %S" 
+                            err-handler err))))))))
     (error
-     (message "Debug: Top-level display error: %S" display-err))))
+     (when flycheck-overlay-debug
+       (message "Debug: Top-level display error: %S" display-err)))))
 
 (defun flycheck-overlay--clear-overlays ()
   "Remove all flycheck overlays from the current buffer."
