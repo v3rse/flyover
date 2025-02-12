@@ -473,7 +473,7 @@ Based on COL-POS, VIRTUAL-LINE, INDICATOR, MARKED-STRING, and EXISTING-BG."
 (defun flycheck-overlay-errors-at (pos)
   "Return the Flycheck errors at POS."
   (delq nil (mapcar (lambda (ov)
-                      (when-let ((err (overlay-get ov 'flycheck-error)))
+                      (when-let* ((err (overlay-get ov 'flycheck-error)))
                         (when (flycheck-error-p err)
                           err)))
                     (overlays-at pos))))
