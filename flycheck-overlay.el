@@ -249,25 +249,30 @@ with and without arrow terminators."
   "Safely sort ERRORS by their buffer positions.
 This function filters out invalid errors and sorts the remaining ones."
   (condition-case sort-err
-      (if (and errors (listp errors) (not (eq errors t)))
-          (let ((sorted-errors
-                 (seq-filter
-                  (lambda (err)
-                    (and err
-                         (not (eq err t))
-                         (flycheck-error-p err)
-                         (let ((line (flycheck-error-line err))
-                               (column (flycheck-error-column err)))
-                           (and (numberp line) (>= line 0)
-                                (or (not column) 
-                                    (and (numberp column) (>= column 0)))))))
-                  errors)))
-            (when flycheck-overlay-debug
-              (message "Debug: Sorted errors: %S" sorted-errors))
-            sorted-errors)
-        (when flycheck-overlay-debug
-          (message "Debug: Invalid errors input: %S" errors))
-        nil)
+      (when (and errors (listp errors))
+        (let ((valid-errors
+               (seq-filter
+                (lambda (err)
+                  (and err
+                       (not (eq err t))
+                       (flycheck-error-p err)
+                       (let ((line (flycheck-error-line err))
+                             (column (flycheck-error-column err)))
+                         (and (numberp line) (>= line 0)
+                              (or (not column)
+                                  (and (numberp column) (>= column 0)))))))
+                errors)))
+          (when flycheck-overlay-debug
+            (message "Debug: Valid errors: %S" valid-errors))
+          (sort valid-errors
+                (lambda (a b)
+                  (let ((line-a (flycheck-error-line a))
+                        (line-b (flycheck-error-line b)))
+                    (or (< line-a line-b)
+                        (and (= line-a line-b)
+                             (let ((col-a (or (flycheck-error-column a) 0))
+                                   (col-b (or (flycheck-error-column b) 0)))
+                               (< col-a col-b)))))))))
     (error
      (when flycheck-overlay-debug
        (message "Debug: Error sorting errors: %S for input: %S" sort-err errors))
