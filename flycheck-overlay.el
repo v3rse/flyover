@@ -4,7 +4,7 @@
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
 ;; Version: 0.5.0
-;; Package-Requires: ((emacs "26.1") (flycheck "0.23") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
 
