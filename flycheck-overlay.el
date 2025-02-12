@@ -338,26 +338,30 @@ Returns a cons cell (START . END) representing the region."
 REGION should be a cons cell (BEG . END) of buffer positions.
 LEVEL is the error level (error, warning, or info).
 ERROR is the optional original flycheck error object."
-  (condition-case ov-err
-      (when (and region (consp region)
-                 (integer-or-marker-p (car region))
-                 (integer-or-marker-p (cdr region)))
-        (let* ((beg (max (point-min) (car region)))
-               (end (min (point-max) (cdr region)))
-               (next-line-beg (save-excursion
-                                (if flycheck-overlay-show-at-eol
-                                    end
-                                    (progn
-                                      (goto-char end)
-                                      (line-beginning-position 2)))))
-               (face (flycheck-overlay--get-face level))
-               (overlay (make-overlay beg next-line-beg nil t nil)))
-          (flycheck-overlay--configure-overlay overlay face msg beg error)
-          overlay))
-    (error
-     (when flycheck-overlay-debug
-       (message "Error creating overlay: %S" ov-err))
-     nil)))
+  (let ((overlay nil))
+    (condition-case ov-err
+        (when (and region (consp region)
+                   (car region) (cdr region)
+                   (integer-or-marker-p (car region))
+                   (integer-or-marker-p (cdr region)))
+          (let* ((beg (max (point-min) (car region)))
+                 (end (min (point-max) (cdr region)))
+                 (next-line-beg (save-excursion
+                                 (goto-char end)
+                                 (if flycheck-overlay-show-at-eol
+                                     end
+                                   (line-beginning-position 2))))
+                 (face (flycheck-overlay--get-face level)))
+            (when (and (numberp beg) (numberp end) (numberp next-line-beg)
+                      (<= beg end) (<= end next-line-beg))
+              (setq overlay (make-overlay beg next-line-beg nil t nil))
+              (when (overlayp overlay)
+                (flycheck-overlay--configure-overlay overlay face msg beg error)))))
+      (error
+       (when flycheck-overlay-debug
+         (message "Error creating overlay: %S for region: %S level: %S msg: %S"
+                  ov-err region level msg))))
+    overlay))
 
 (defun flycheck-overlay--get-face (type)
   "Return the face corresponding to the error TYPE."
