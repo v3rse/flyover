@@ -494,7 +494,7 @@ Ignores colons that appear within quotes or parentheses."
   "Display ERRORS using overlays."
   (condition-case display-err
       (let ((errs (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))))
-        (when (and (listp errs) (not (eq errs t)))  ; Ensure errs is a proper list
+        (when (and errs (listp errs) (not (eq errs t)))  ; Ensure errs is a proper list and not t
           (flycheck-overlay--clear-overlays)  ; Clear existing overlays
           (dolist (err errs)
             (when (and err (flycheck-error-p err))  ; Extra validation
@@ -593,12 +593,17 @@ Ignores colons that appear within quotes or parentheses."
       (when (buffer-modified-p)
         (let ((current-line (line-number-at-pos)))
           (dolist (ov flycheck-overlay--overlays)
-            (when (and (overlayp ov)
-                       (let ((ov-line (line-number-at-pos (overlay-start ov))))
-                         (= ov-line current-line)))
+            (when (and ov 
+                      (overlayp ov)
+                      (overlay-buffer ov)  ; Check if overlay is still valid
+                      (let ((ov-line (line-number-at-pos (overlay-start ov))))
+                        (= ov-line current-line)))
               (delete-overlay ov)))
           (setq flycheck-overlay--overlays
-                (cl-remove-if-not #'overlay-buffer flycheck-overlay--overlays))))
+                (cl-remove-if-not (lambda (ov)
+                                   (and (overlayp ov)
+                                        (overlay-buffer ov)))
+                                 flycheck-overlay--overlays))))
     (error
      (message "Error in flycheck-overlay--handle-buffer-changes: %S" err))))
 
