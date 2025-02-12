@@ -139,7 +139,7 @@ Based on foreground color"
   :type 'number
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-debug nil
+(defcustom flycheck-overlay-debug t
   "Enable debug messages for flycheck-overlay."
  :type 'boolean
  :group 'flycheck-overlay)
