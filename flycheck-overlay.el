@@ -293,15 +293,12 @@ When COLUMN is 0 or nil, finds first non-whitespace character on the line."
       (condition-case err
           (progn
             (goto-char (point-min))
-            (when (>= line 0)
-              (forward-line (1- line)))
-            (if (<= column 0)
-                (progn
-                  (beginning-of-line)
-                  (skip-chars-forward " \t"))
-              (forward-char (min (1- column)
-                               (- (line-end-position) (point)))))
-            (point))
+            (forward-line (1- (max 1 line)))
+            (when (> column 0)
+              (move-to-column column))
+            (if (eobp)
+                (line-beginning-position)
+              (point)))
         (error
          (when flycheck-overlay-debug
            (message "Debug: Error in get-safe-position: %S for line %S col %S"
