@@ -399,6 +399,8 @@ ERROR is the optional original flycheck error object."
 (defun flycheck-overlay--configure-overlay (overlay face msg beg error)
   "Configure OVERLAY with FACE, MSG, and BEG and ERROR."
   (overlay-put overlay 'flycheck-overlay t)
+  (when (flycheck-error-p error)
+    (overlay-put overlay 'flycheck-error error))
   (let* ((col-pos (save-excursion
                     (goto-char beg)
                     (current-column)))
@@ -471,7 +473,9 @@ Based on COL-POS, VIRTUAL-LINE, INDICATOR, MARKED-STRING, and EXISTING-BG."
 (defun flycheck-overlay-errors-at (pos)
   "Return the Flycheck errors at POS."
   (delq nil (mapcar (lambda (ov)
-                      (overlay-get ov 'flycheck-overlay))
+                      (when-let ((err (overlay-get ov 'flycheck-error)))
+                        (when (flycheck-error-p err)
+                          err)))
                     (overlays-at pos))))
 
 (defun flycheck-overlay--remove-checker-name (msg)
