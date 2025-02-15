@@ -278,36 +278,6 @@ This function ensures all errors are valid and have proper positions."
        (message "Debug: Error filtering errors: %S for input: %S" filter-err errors))
      nil)))
 
-(defun flycheck-overlay--get-safe-position (line column)
-  "Get a safe buffer position for LINE and COLUMN.
-LINE and COLUMN are 1-based positions in the buffer.
-Returns a buffer position that is guaranteed to be within bounds.
-When COLUMN is 0 or nil, finds first non-whitespace character on the line."
-  (when (or (null line) (not (numberp line)))
-    (setq line 1))
-  (when (or (null column) (not (numberp column)))
-    (setq column 0))
-  (save-restriction
-    (widen)
-    (save-excursion
-      (condition-case err
-          (progn
-            (goto-char (point-min))
-            (when (>= line 0)
-              (forward-line (1- line)))
-            (if (<= column 0)
-                (progn
-                  (beginning-of-line)
-                  (skip-chars-forward " \t"))
-              (forward-char (min (1- column)
-                               (- (line-end-position) (point)))))
-            (point))
-        (error
-         (when flycheck-overlay-debug
-           (message "Debug: Error in get-safe-position: %S for line %S col %S" 
-                    err line column))
-         (point-min))))))
-
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR."
   (condition-case region-err
@@ -346,7 +316,7 @@ ERROR is the optional original flycheck error object."
                                     end
                                     (line-beginning-position 2)))
                    (face (flycheck-overlay--get-face level)))
-              (when (and (numberp beg) 
+              (when (and (numberp beg)
                         (numberp end)
                         (numberp next-line-beg)
                         (> beg 0)
@@ -493,7 +463,7 @@ EXISTING-BG is the background color."
     (message "Debug overlay-string: starting with col-pos=%S" col-pos))
   (let ((result-string
          (if flycheck-overlay-show-at-eol
-             (concat indicator marked-string)
+             (concat " " indicator marked-string)
            (concat (make-string (or col-pos 0) ?\s) 
                   virtual-line 
                   indicator 
