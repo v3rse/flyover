@@ -580,11 +580,12 @@ Ignores colons that appear within quotes or parentheses."
     (add-hook 'flycheck-after-syntax-check-hook
               #'flycheck-overlay--maybe-display-errors-debounced nil t))
   (when (memq 'flymake flycheck-overlay-checkers)
-    (add-hook 'flymake-diagnostic-functions
+    (add-hook 'flymake-after-diagnostics-hook  ; Changed from flymake-diagnostic-functions
               #'flycheck-overlay--maybe-display-errors-debounced nil t))
   (add-hook 'after-change-functions
             #'flycheck-overlay--handle-buffer-changes nil t)
-  (flycheck-overlay--maybe-display-errors-debounced))
+  ;; Force initial display of existing errors
+  (flycheck-overlay--maybe-display-errors))
 
 (defun flycheck-overlay--disable ()
   "Disable Flycheck/Flymake overlay mode."
