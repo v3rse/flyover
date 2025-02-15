@@ -541,17 +541,20 @@ Ignores colons that appear within quotes or parentheses."
       (let ((errs (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))))
         (when errs
           (flycheck-overlay--clear-overlays)
-          (dolist (err errs)
-            (when (flycheck-error-p err)
-              (let* ((level (flycheck-error-level err))
-                     (msg (flycheck-error-message err))
-                     (line (flycheck-error-line err))
-                     (col (flycheck-error-column err)))
-                (when-let* ((msg (and msg (flycheck-overlay--remove-checker-name msg)))
-                           (region (flycheck-overlay--get-error-region err)))
-                  (when-let* ((overlay (flycheck-overlay--create-overlay 
-                                     region level msg err)))
-                    (push overlay flycheck-overlay--overlays))))))))
+          ;; Reverse the list to maintain correct display order
+          (setq flycheck-overlay--overlays
+                (cl-loop for err in errs
+                         when (flycheck-error-p err)
+                         for level = (flycheck-error-level err)
+                         for msg = (flycheck-error-message err)
+                         for line = (flycheck-error-line err)
+                         for col = (flycheck-error-column err)
+                         for cleaned-msg = (and msg (flycheck-overlay--remove-checker-name msg))
+                         for region = (and cleaned-msg (flycheck-overlay--get-error-region err))
+                         for overlay = (and region (flycheck-overlay--create-overlay 
+                                                  region level cleaned-msg err))
+                         when overlay
+                         collect overlay))))
     (error
      (when flycheck-overlay-debug
        (message "Debug: Display error: %S" display-err)))))
