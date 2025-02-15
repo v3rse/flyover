@@ -538,10 +538,8 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
   (condition-case display-err
-      (let ((errs
-             ;; (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))
-             (or errors (flycheck-overlay--get-all-errors))
-             ))
+      (let ((errs (flycheck-overlay--filter-errors
+                   (or errors (flycheck-overlay--get-all-errors)))))
         (when errs
           (flycheck-overlay--clear-overlays)
           ;; Reverse the list to maintain correct display order
