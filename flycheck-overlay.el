@@ -269,8 +269,19 @@ This function filters out invalid errors and sorts the remaining ones."
                     (or (< line-a line-b)
                         (and (= line-a line-b)
                              (let ((col-a (or (flycheck-error-column a) 0))
-                                   (col-b (or (flycheck-error-column b) 0)))
-                               (< col-a col-b)))))))))
+                                   (col-b (or (flycheck-error-column b) 0))
+                                   (level-a (flycheck-error-level a))
+                                   (level-b (flycheck-error-level b)))
+                               (if (= col-a col-b)
+                                   ;; For same column, sort error before warning before info
+                                   (cond
+                                    ((eq level-a 'error) t)
+                                    ((eq level-b 'error) nil)
+                                    ((eq level-a 'warning) t)
+                                    ((eq level-b 'warning) nil)
+                                    (t nil))
+                                   ;; Different columns
+                                   (< col-a col-b))))))))))
     (error
      (when flycheck-overlay-debug
        (message "Debug: Error sorting errors: %S for input: %S" sort-err errors))
