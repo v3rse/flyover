@@ -269,19 +269,8 @@ This function filters out invalid errors and sorts the remaining ones."
                     (or (< line-a line-b)
                         (and (= line-a line-b)
                              (let ((col-a (or (flycheck-error-column a) 0))
-                                   (col-b (or (flycheck-error-column b) 0))
-                                   (level-a (flycheck-error-level a))
-                                   (level-b (flycheck-error-level b)))
-                               (if (= col-a col-b)
-                                   ;; For same column, sort error before warning before info
-                                   (cond
-                                    ((eq level-a 'error) t)
-                                    ((eq level-b 'error) nil)
-                                    ((eq level-a 'warning) t)
-                                    ((eq level-b 'warning) nil)
-                                    (t nil))
-                                   ;; Different columns
-                                   (< col-a col-b))))))))))
+                                   (col-b (or (flycheck-error-column b) 0)))
+                               (< col-a col-b)))))))))
     (error
      (when flycheck-overlay-debug
        (message "Debug: Error sorting errors: %S for input: %S" sort-err errors))
@@ -549,7 +538,10 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
   (condition-case display-err
-      (let ((errs (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))))
+      (let ((errs
+             ;; (flycheck-overlay--sort-errors (or errors (flycheck-overlay--get-all-errors)))
+             (or errors (flycheck-overlay--get-all-errors))
+             ))
         (when errs
           (flycheck-overlay--clear-overlays)
           ;; Reverse the list to maintain correct display order
@@ -558,8 +550,6 @@ Ignores colons that appear within quotes or parentheses."
                          when (flycheck-error-p err)
                          for level = (flycheck-error-level err)
                          for msg = (flycheck-error-message err)
-                         for line = (flycheck-error-line err)
-                         for col = (flycheck-error-column err)
                          for cleaned-msg = (and msg (flycheck-overlay--remove-checker-name msg))
                          for region = (and cleaned-msg (flycheck-overlay--get-error-region err))
                          for overlay = (and region (flycheck-overlay--create-overlay 
