@@ -243,10 +243,10 @@ with and without arrow terminators."
                             (flycheck-overlay--get-flymake-diagnostics)))))
     all-errors))
 
-(defun flycheck-overlay--sort-errors (errors)
-  "Safely sort ERRORS by their buffer positions.
-This function filters out invalid errors and sorts the remaining ones."
-  (condition-case sort-err
+(defun flycheck-overlay--filter-errors (errors)
+  "Filter out invalid ERRORS.
+This function ensures all errors are valid and have proper positions."
+  (condition-case filter-err
       (when (and errors (listp errors))
         (let ((valid-errors
                (seq-filter
@@ -262,18 +262,10 @@ This function filters out invalid errors and sorts the remaining ones."
                 errors)))
           (when flycheck-overlay-debug
             (message "Debug: Valid errors: %S" valid-errors))
-          (sort valid-errors
-                (lambda (a b)
-                  (let ((line-a (flycheck-error-line a))
-                        (line-b (flycheck-error-line b)))
-                    (or (< line-a line-b)
-                        (and (= line-a line-b)
-                             (let ((col-a (or (flycheck-error-column a) 0))
-                                   (col-b (or (flycheck-error-column b) 0)))
-                               (< col-a col-b)))))))))
+          valid-errors))
     (error
      (when flycheck-overlay-debug
-       (message "Debug: Error sorting errors: %S for input: %S" sort-err errors))
+       (message "Debug: Error filtering errors: %S for input: %S" filter-err errors))
      nil)))
 
 (defun flycheck-overlay--get-safe-position (line column)
