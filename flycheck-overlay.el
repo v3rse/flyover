@@ -243,6 +243,16 @@ with and without arrow terminators."
                             (flycheck-overlay--get-flymake-diagnostics)))))
     all-errors))
 
+(defun flycheck-overlay--error-position-< (err1 err2)
+  "Compare two errors ERR1 and ERR2 by position."
+  (let ((line1 (flycheck-error-line err1))
+        (line2 (flycheck-error-line err2))
+        (col1 (flycheck-error-column err1))
+        (col2 (flycheck-error-column err2)))
+    (or (< line1 line2)
+        (and (= line1 line2)
+             (< (or col1 0) (or col2 0))))))
+
 (defun flycheck-overlay--filter-errors (errors)
   "Filter out invalid ERRORS.
 This function ensures all errors are valid and have proper positions."
@@ -411,17 +421,24 @@ ERROR is the optional original flycheck error object."
   "Configure OVERLAY with FACE, MSG, and BEG and ERROR."
   (condition-case err
       (when (overlayp overlay)
-        ;; Sätt grundläggande overlay properties
+        ;; Set basic overlay properties
         (overlay-put overlay 'flycheck-overlay t)
         (overlay-put overlay 'evaporate t)
-        (overlay-put overlay 'priority 1000)
         (overlay-put overlay 'modification-hooks 
                      '(flycheck-overlay--clear-overlay-on-modification))
         
-        (let* ((col-pos (progn
-                         (save-excursion
-                           (goto-char (or beg (point-min)))
-                           (current-column))))
+        ;; Calculate priority based on error level and column
+        (let* ((col-pos (save-excursion
+                         (goto-char (or beg (point-min)))
+                         (current-column)))
+               ;; Base priority by error type
+               (level-priority (pcase (flycheck-error-level error)
+                               ('error 3000)
+                               ('warning 2000)
+                               ('info 1000)
+                               (_ 0)))
+               ;; Subtract column to make earlier columns appear after later ones
+               (final-priority (- level-priority col-pos))
                (existing-bg (face-background face nil t))
                (indicator (flycheck-overlay--get-indicator face))
                (display-msg (concat " " msg " "))
@@ -433,13 +450,11 @@ ERROR is the optional original flycheck error object."
                                          'cursor-sensor-functions nil
                                          'cursor-intangible t
                                          'rear-nonsticky t))
-
                (marked-string (flycheck-overlay--mark-all-symbols
                              :input display-string
                              :regex flycheck-overlay-regex-mark-quotes
                              :property `(:inherit flycheck-overlay-marker 
-                                                  :background ,existing-bg)))
-
+                                       :background ,existing-bg)))
                (overlay-string (progn
                                (flycheck-overlay--create-overlay-string 
                                 col-pos virtual-line indicator marked-string existing-bg)))
@@ -447,6 +462,9 @@ ERROR is the optional original flycheck error object."
                                     (< (+ col-pos (length display-msg)) (window-width)))
                                overlay-string
                              (concat overlay-string "\n"))))
+          
+          ;; Set the overlay priority
+          (overlay-put overlay 'priority final-priority)
           
           (overlay-put overlay 'after-string 
                        (propertize final-string
@@ -530,20 +548,34 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
   (condition-case display-err
-      (let ((errs (flycheck-overlay--filter-errors
-                   (or errors (flycheck-overlay--get-all-errors)))))
-        (when errs
+      (let* ((filtered-errors (flycheck-overlay--filter-errors (or errors (flycheck-overlay--get-all-errors))))
+             (sorted-errors (progn
+                            (when flycheck-overlay-debug
+                              (message "Before sorting: %S" 
+                                     (mapcar (lambda (err)
+                                             (cons (flycheck-error-line err)
+                                                   (flycheck-error-column err)))
+                                             filtered-errors)))
+                            (sort filtered-errors #'flycheck-overlay--error-position-<))))
+      (when flycheck-overlay-debug
+          (message "After sorting: %S"
+                   (mapcar (lambda (err)
+                           (cons (flycheck-error-line err)
+                                 (flycheck-error-column err)))
+                           sorted-errors)))
+
+        (when filtered-errors
           (flycheck-overlay--clear-overlays)
           ;; Reverse the list to maintain correct display order
           (setq flycheck-overlay--overlays
-                (cl-loop for err in errs
+                (cl-loop for err in filtered-errors
                          when (flycheck-error-p err)
                          for level = (flycheck-error-level err)
                          for msg = (flycheck-error-message err)
                          for cleaned-msg = (and msg (flycheck-overlay--remove-checker-name msg))
                          for region = (and cleaned-msg (flycheck-overlay--get-error-region err))
                          for overlay = (and region (flycheck-overlay--create-overlay 
-                                                  region level cleaned-msg err))
+                                                    region level cleaned-msg err))
                          when overlay
                          collect overlay))))
     (error

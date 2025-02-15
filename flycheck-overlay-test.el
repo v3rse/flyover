@@ -22,8 +22,8 @@ Returns a list of created errors for verification."
     (push (flycheck-error-new-at 1 6 'error "Error at line 1 column 6") errors)
     (push (flycheck-error-new-at 2 6 'warning "Warning at line 2 column 6") errors)
     (push (flycheck-error-new-at 3 6 'info "Info at line 3 and column 6") errors)
-    (push (flycheck-error-new-at 4 20 'warning "Warning at line 4 column 20") errors)
     (push (flycheck-error-new-at 4 6 'error "Error at line 4 column 6") errors)
+    (push (flycheck-error-new-at 4 20 'warning "Warning at line 4 column 20") errors)
 
     ;; Display the errors
     (flycheck-overlay--display-errors errors)
