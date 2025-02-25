@@ -281,22 +281,26 @@ This function ensures all errors are valid and have proper positions."
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR."
   (condition-case region-err
-      (progn
-        (let* ((line (flycheck-error-line err))
-               (column (or (flycheck-error-column err) 0)) ; Sätt till 0 om nil
-               (start-pos (progn
-                           (save-excursion
+      (save-excursion
+        (save-restriction
+          (widen)
+          (let* ((line (flycheck-error-line err))
+                 (column (or (flycheck-error-column err) 0))
+                 (start-pos (progn
                              (goto-char (point-min))
-                             (forward-line (1- line))
-                             (when (> column 0)
-                               (move-to-column column))
-                             (point))))
-               (end-pos (progn
-                         (save-excursion
-                           (goto-char start-pos)
-                           (line-end-position)))))
-          (when (and (numberp start-pos) (numberp end-pos))
-            (cons start-pos end-pos))))
+                             (forward-line (1- line))  ; line is 1-based
+                             (point))))  ; Always get position, even for empty lines
+            (when start-pos
+              (goto-char start-pos)
+              (let ((end-pos (line-end-position)))
+                ;; For empty lines, ensure we still have a valid region
+                (when (= start-pos end-pos)
+                  (setq end-pos (1+ start-pos)))
+                (when (and (numberp start-pos) (numberp end-pos)
+                          (> start-pos 0) (> end-pos 0)
+                          (<= start-pos (point-max))
+                          (<= end-pos (point-max)))
+                  (cons start-pos end-pos)))))))
     (error
      (message "Error in get-error-region: %S" region-err)
      nil)))
@@ -340,6 +344,11 @@ ERROR is the optional original flycheck error object."
     ('error 'flycheck-overlay-error)
     ('warning 'flycheck-overlay-warning)
     ('info 'flycheck-overlay-info)
+    ;; Handle string type names (from flymake conversion)
+    ("error" 'flycheck-overlay-error)
+    ("warning" 'flycheck-overlay-warning)
+    ("info" 'flycheck-overlay-info)
+    ;; Default to warning for any other type
     (_ 'flycheck-overlay-warning)))
 
 (defun flycheck-overlay--get-indicator (type)
@@ -352,7 +361,7 @@ ERROR is the optional original flycheck error object."
                   ('flycheck-overlay-info
                    (cons flycheck-overlay-info-icon 'flycheck-overlay-info))
                   (_
-                   (cons flycheck-overlay-info-icon 'flycheck-overlay-info))))
+                   (cons flycheck-overlay-warning-icon 'flycheck-overlay-warning))))
          (icon (car props))
          (face-name (cdr props))
          (height (face-attribute face-name :height))
@@ -406,7 +415,10 @@ ERROR is the optional original flycheck error object."
                                ('error 3000)
                                ('warning 2000)
                                ('info 1000)
-                               (_ 0)))
+                               ("error" 3000)
+                               ("warning" 2000)
+                               ("info" 1000)
+                               (_ 2000)))  ;; Default to warning priority
                ;; Subtract column to make earlier columns appear after later ones
                (final-priority (- level-priority col-pos))
                (existing-bg (face-background face nil t))
@@ -425,13 +437,33 @@ ERROR is the optional original flycheck error object."
                              :regex flycheck-overlay-regex-mark-quotes
                              :property `(:inherit flycheck-overlay-marker 
                                        :background ,existing-bg)))
-               (overlay-string (progn
+               (overlay-string (if flycheck-overlay-show-at-eol
+                                 (concat (propertize " " 'face face)
+                                        indicator
+                                        (propertize " " 'face face)
+                                        marked-string)
                                (flycheck-overlay--create-overlay-string 
                                 col-pos virtual-line indicator marked-string existing-bg)))
-               (final-string (if (and flycheck-overlay-show-at-eol
-                                    (< (+ col-pos (length display-msg)) (window-width)))
-                               overlay-string
-                             (concat overlay-string "\n"))))
+               (line-content (buffer-substring-no-properties 
+                            (line-beginning-position) 
+                            (line-end-position)))
+               (is-empty-line (string-empty-p (string-trim line-content)))
+               (final-string (cond
+                            ;; Empty line with show-at-eol
+                            ((and is-empty-line flycheck-overlay-show-at-eol)
+                             (concat (propertize " " 'face face)
+                                    indicator
+                                    (propertize " " 'face face)
+                                    marked-string))
+                            ;; Empty line without show-at-eol
+                            (is-empty-line
+                             (concat indicator marked-string "\n"))
+                            ;; Normal line with show-at-eol
+                            (flycheck-overlay-show-at-eol
+                             (concat overlay-string (propertize " " 'face face)))
+                            ;; Normal line without show-at-eol
+                            (t
+                             (concat overlay-string "\n")))))
           
           ;; Set the overlay priority
           (overlay-put overlay 'priority final-priority)
@@ -532,7 +564,9 @@ Ignores colons that appear within quotes or parentheses."
                    (mapcar (lambda (err)
                            (cons (flycheck-error-line err)
                                  (flycheck-error-column err)))
-                           sorted-errors)))
+                           sorted-errors))
+          (message "Error levels: %S"
+                   (mapcar #'flycheck-error-level sorted-errors)))
 
         (when filtered-errors
           (flycheck-overlay--clear-overlays)
