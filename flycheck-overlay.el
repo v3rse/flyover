@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.5.1
+;; Version: 0.5.2
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/yourusername/flycheck-overlay
@@ -698,6 +698,13 @@ Ignores colons that appear within quotes or parentheses."
                                  (floor (* component (- 100 percent) 0.01))))
                           rgb)))
     (apply 'flycheck-overlay--rgb-to-hex darkened)))
+
+(defun flycheck-overlay-toggle ()
+  "Toggle Flycheck Overlay mode."
+  (interactive)
+  (if flycheck-overlay-mode
+      (flycheck-overlay-mode -1)
+    (flycheck-overlay-mode 1)))
 
 (provide 'flycheck-overlay)
 ;;; flycheck-overlay.el ends here
