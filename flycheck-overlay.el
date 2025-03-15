@@ -3,10 +3,10 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.5.2
+;; Version: 0.5.5
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
-;; URL: https://github.com/yourusername/flycheck-overlay
+;; URL: https://github.com/konrad1977/flycheck-overlay
 
 ;;; Commentary:
 ;; This package provides a way to display Flycheck errors using overlays.
