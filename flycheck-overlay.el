@@ -51,27 +51,27 @@ Supported values are `flycheck` and `flymake`."
   "Regex used to match the checker name at the start of the error message.")
 
 (defface flycheck-overlay-error
-  '((t :background "#453246"
-       :foreground "#ea8faa"
+  '((t :inherit error
        :height 0.9
        :weight normal))
-  "Face used for error overlays."
+  "Face used for error overlays.
+Inherits from the theme's error face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-warning
-  '((t :background "#331100"
-       :foreground "#DCA561"
+  '((t :inherit warning
        :height 0.9
        :weight normal))
-  "Face used for warning overlays."
+  "Face used for warning overlays.
+Inherits from the theme's warning face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-info
-  '((t :background "#374243"
-       :foreground "#a8e3a9"
+  '((t :inherit success
        :height 0.9
        :weight normal))
-  "Face used for info overlays."
+  "Face used for info overlays.
+Inherits from the theme's success face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-marker
@@ -101,9 +101,21 @@ Supported values are `flycheck` and `flymake`."
   :type 'string
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-percent-darker 50
+(defcustom flycheck-overlay-percent-darker 40
   "Icon background percent darker.
 Based on foreground color"
+  :type 'integer
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-use-theme-colors t
+  "Use theme colors for error, warning, and info faces.
+When non-nil, adapts colors from the current theme."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-background-lightness 45
+  "Background lightness percentage for overlay faces.
+Lower values make backgrounds darker."
   :type 'integer
   :group 'flycheck-overlay)
 
@@ -365,7 +377,16 @@ ERROR is the optional original flycheck error object."
          (icon (car props))
          (face-name (cdr props))
          (height (face-attribute face-name :height))
-         (color (face-attribute face-name :foreground))
+         (color (if flycheck-overlay-use-theme-colors
+                    (pcase face-name
+                      ('flycheck-overlay-error 
+                       (flycheck-overlay--get-theme-face-color 'error :foreground))
+                      ('flycheck-overlay-warning 
+                       (flycheck-overlay--get-theme-face-color 'warning :foreground))
+                      ('flycheck-overlay-info 
+                       (flycheck-overlay--get-theme-face-color 'success :foreground))
+                      (_ (face-attribute face-name :foreground)))
+                  (face-attribute face-name :foreground)))
          (bg-color (flycheck-overlay--darken-color color flycheck-overlay-percent-darker)))
     
     (concat
@@ -421,14 +442,18 @@ ERROR is the optional original flycheck error object."
                                (_ 2000)))  ;; Default to warning priority
                ;; Subtract column to make earlier columns appear after later ones
                (final-priority (- level-priority col-pos))
-               (existing-bg (face-background face nil t))
+               (error-level (flycheck-error-level error))
+               (colors (flycheck-overlay--get-face-colors error-level))
+               (fg-color (car colors))
+               (bg-color (cdr colors))
+               (face-with-colors `(:inherit ,face :foreground ,fg-color :background ,bg-color))
                (indicator (flycheck-overlay--get-indicator face))
                (display-msg (concat " " msg " "))
                (virtual-line (when flycheck-overlay-show-virtual-line
                              (propertize (flycheck-overlay-get-arrow)
-                                       'face `(:foreground ,(face-foreground face nil t)))))
+                                       'face `(:foreground ,fg-color))))
                (display-string (propertize display-msg
-                                         'face face
+                                         'face face-with-colors
                                          'cursor-sensor-functions nil
                                          'cursor-intangible t
                                          'rear-nonsticky t))
@@ -436,14 +461,14 @@ ERROR is the optional original flycheck error object."
                              :input display-string
                              :regex flycheck-overlay-regex-mark-quotes
                              :property `(:inherit flycheck-overlay-marker 
-                                       :background ,existing-bg)))
+                                       :background ,bg-color)))
                (overlay-string (if flycheck-overlay-show-at-eol
-                                 (concat (propertize " " 'face face)
+                                 (concat (propertize " " 'face face-with-colors)
                                         indicator
-                                        (propertize " " 'face face)
+                                        (propertize " " 'face face-with-colors)
                                         marked-string)
                                (flycheck-overlay--create-overlay-string 
-                                col-pos virtual-line indicator marked-string existing-bg)))
+                                col-pos virtual-line indicator marked-string bg-color)))
                (line-content (buffer-substring-no-properties 
                             (line-beginning-position) 
                             (line-end-position)))
@@ -451,16 +476,16 @@ ERROR is the optional original flycheck error object."
                (final-string (cond
                             ;; Empty line with show-at-eol
                             ((and is-empty-line flycheck-overlay-show-at-eol)
-                             (concat (propertize " " 'face face)
+                             (concat (propertize " " 'face face-with-colors)
                                     indicator
-                                    (propertize " " 'face face)
+                                    (propertize " " 'face face-with-colors)
                                     marked-string))
                             ;; Empty line without show-at-eol
                             (is-empty-line
                              (concat indicator marked-string "\n"))
                             ;; Normal line with show-at-eol
                             (flycheck-overlay-show-at-eol
-                             (concat overlay-string (propertize " " 'face face)))
+                             (concat overlay-string (propertize " " 'face face-with-colors)))
                             ;; Normal line without show-at-eol
                             (t
                              (concat overlay-string "\n")))))
@@ -484,13 +509,13 @@ ERROR is the optional original flycheck error object."
   "Clear OVERLAY when the buffer is modified."
   (delete-overlay overlay))
 
-(defun flycheck-overlay--create-overlay-string (col-pos virtual-line indicator marked-string existing-bg)
+(defun flycheck-overlay--create-overlay-string (col-pos virtual-line indicator marked-string bg-color)
   "Create the overlay string.
 COL-POS is the column position.
 VIRTUAL-LINE is the line indicator.
 INDICATOR is the error/warning icon.
 MARKED-STRING is the message with marked symbols.
-EXISTING-BG is the background color."
+BG-COLOR is the background color."
   (when flycheck-overlay-debug
     (message "Debug overlay-string: starting with col-pos=%S" col-pos))
   (let ((result-string
@@ -506,7 +531,7 @@ EXISTING-BG is the background color."
     (flycheck-overlay--mark-all-symbols
      :input result-string
      :regex flycheck-overlay-regex-mark-parens
-     :property `(:inherit flycheck-overlay-marker :background ,existing-bg))))
+     :property `(:inherit flycheck-overlay-marker :background ,bg-color))))
 
 (defun flycheck-overlay-replace-curly-quotes (text)
   "Replace curly quotes with straight quotes in TEXT."
@@ -698,6 +723,51 @@ Ignores colons that appear within quotes or parentheses."
                                  (floor (* component (- 100 percent) 0.01))))
                           rgb)))
     (apply 'flycheck-overlay--rgb-to-hex darkened)))
+
+(defun flycheck-overlay--get-theme-face-color (face-name attribute &optional fallback)
+  "Get color for FACE-NAME's ATTRIBUTE from current theme.
+If not found, return FALLBACK color."
+  (let ((color (face-attribute face-name attribute nil t)))
+    (if (or (eq color 'unspecified) (not color))
+        fallback
+      color)))
+
+(defun flycheck-overlay--create-background-from-foreground (fg-color lightness)
+  "Create a background color from FG-COLOR with LIGHTNESS percent.
+Lower LIGHTNESS values create darker backgrounds."
+  (let* ((rgb (flycheck-overlay--color-to-rgb fg-color))
+         (bg (mapcar (lambda (component)
+                       (min 255
+                            (floor (* component (/ lightness 100.0)))))
+                     rgb)))
+    (apply 'flycheck-overlay--rgb-to-hex bg)))
+
+(defun flycheck-overlay--get-face-colors (level)
+  "Get foreground and background colors for error LEVEL.
+Uses theme colors when `flycheck-overlay-use-theme-colors' is non-nil."
+  (if (not flycheck-overlay-use-theme-colors)
+      ;; Use the face directly
+      (let ((face (flycheck-overlay--get-face level)))
+        (cons (face-foreground face nil t)
+              (face-background face nil t)))
+    ;; Use theme colors
+    (pcase level
+      ((or 'error "error")
+       (let ((fg (flycheck-overlay--get-theme-face-color 'error :foreground "#ea8faa")))
+         (cons fg (flycheck-overlay--create-background-from-foreground 
+                   fg flycheck-overlay-background-lightness))))
+      ((or 'warning "warning")
+       (let ((fg (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))
+         (cons fg (flycheck-overlay--create-background-from-foreground 
+                   fg flycheck-overlay-background-lightness))))
+      ((or 'info "info")
+       (let ((fg (flycheck-overlay--get-theme-face-color 'success :foreground "#a8e3a9")))
+         (cons fg (flycheck-overlay--create-background-from-foreground 
+                   fg flycheck-overlay-background-lightness))))
+      (_
+       (let ((fg (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))
+         (cons fg (flycheck-overlay--create-background-from-foreground 
+                   fg flycheck-overlay-background-lightness)))))))
 
 (defun flycheck-overlay-toggle ()
   "Toggle Flycheck Overlay mode."

@@ -44,6 +44,19 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 (add-hook 'flycheck-mode-hook #'flycheck-overlay-mode)
 ```
 
+### Theme Integration
+
+```elisp
+;; Use theme colors for error/warning/info faces
+(setq flycheck-overlay-use-theme-colors t)
+
+;; Adjust background lightness (lower values = darker)
+(setq flycheck-overlay-background-lightness 45)
+
+;; Make icon background darker than foreground
+(setq flycheck-overlay-percent-darker 40)
+```
+
 ### Customizing Faces
 
 You can customize the appearance of overlays by modifying these faces:
@@ -80,10 +93,20 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 - Update in real-time as you type
 - Clear automatically when errors are fixed
 
+### Checker Configuration
+
+```elisp
+;; Choose which checkers to use (flycheck, flymake, or both)
+(setq flycheck-overlay-checkers '(flycheck flymake))
+
+;; Enable debug messages
+(setq flycheck-overlay-debug nil)
+```
+
 ### Optimization settings
 
 ```elisp
-;;; Time in seconds to wait before checking and displaying errors after a change.
+;; Time in seconds to wait before checking and displaying errors after a change
 (setq flycheck-overlay-debounce-interval 0.2) 
 ```
 
