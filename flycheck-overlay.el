@@ -81,6 +81,18 @@ Inherits from the theme's success face."
   "Face used for info overlays."
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-text-tint 'lighter
+  "Tint type for text.  Possible values: nil, \='lighter, \='darker."
+  :type '(choice (const :tag "No tinting" nil)
+                 (const :tag "Lighter than base color" lighter)
+                 (const :tag "Darker than base color" darker))
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-text-tint-percent 50
+  "Percentage to lighten or darken the text when tinting is enabled."
+  :type 'integer
+  :group 'flycheck-overlay)
+
 (defcustom flycheck-overlay-info-icon " "
   "Icon used for information."
   :type 'string
@@ -101,7 +113,7 @@ Inherits from the theme's success face."
   :type 'string
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-percent-darker 40
+(defcustom flycheck-overlay-percent-darker 50
   "Icon background percent darker.
 Based on foreground color"
   :type 'integer
@@ -113,7 +125,7 @@ When non-nil, adapts colors from the current theme."
   :type 'boolean
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-background-lightness 45
+(defcustom flycheck-overlay-background-lightness 75
   "Background lightness percentage for overlay faces.
 Lower values make backgrounds darker."
   :type 'integer
@@ -440,15 +452,25 @@ ERROR is the optional original flycheck error object."
                                ("warning" 2000)
                                ("info" 1000)
                                (_ 2000)))  ;; Default to warning priority
+               
                ;; Subtract column to make earlier columns appear after later ones
                (final-priority (- level-priority col-pos))
                (error-level (flycheck-error-level error))
                (colors (flycheck-overlay--get-face-colors error-level))
                (fg-color (car colors))
                (bg-color (cdr colors))
-               (face-with-colors `(:inherit ,face :foreground ,fg-color :background ,bg-color))
+               ;; (face-with-colors `(:inherit ,face :foreground ,fg-color :background ,bg-color))
                (indicator (flycheck-overlay--get-indicator face))
                (display-msg (concat " " msg " "))
+               (tinted-fg (if flycheck-overlay-text-tint
+                              (flycheck-overlay--tint-color 
+                               fg-color 
+                               flycheck-overlay-text-tint 
+                               flycheck-overlay-text-tint-percent)
+                            fg-color))
+               (face-with-colors `(:inherit ,face 
+                                            :foreground ,tinted-fg
+                                            :background ,bg-color))
                (virtual-line (when flycheck-overlay-show-virtual-line
                              (propertize (flycheck-overlay-get-arrow)
                                        'face `(:foreground ,fg-color))))
@@ -768,6 +790,21 @@ Uses theme colors when `flycheck-overlay-use-theme-colors' is non-nil."
        (let ((fg (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))
          (cons fg (flycheck-overlay--create-background-from-foreground 
                    fg flycheck-overlay-background-lightness)))))))
+
+(defun flycheck-overlay--tint-color (color tint percent)
+  "Tint COLOR according to TINT type and PERCENT amount.
+TINT should be either =\'lighter or =\'darker."
+  (pcase tint
+    ('lighter
+     (let* ((rgb (flycheck-overlay--color-to-rgb color))
+            (lightened (mapcar (lambda (component)
+                                 (min 255
+                                      (floor (+ component (* (- 255 component) (/ percent 100.0))))))
+                               rgb)))
+       (apply 'flycheck-overlay--rgb-to-hex lightened)))
+    ('darker
+     (flycheck-overlay--darken-color color percent))
+    (_ color)))
 
 (defun flycheck-overlay-toggle ()
   "Toggle Flycheck Overlay mode."
