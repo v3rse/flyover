@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.5.6
+;; Version: 0.5.7
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -309,7 +309,6 @@ This function ensures all errors are valid and have proper positions."
         (save-restriction
           (widen)
           (let* ((line (flycheck-error-line err))
-                 (column (or (flycheck-error-column err) 0))
                  (start-pos (progn
                              (goto-char (point-min))
                              (forward-line (1- line))  ; line is 1-based
@@ -375,8 +374,8 @@ ERROR is the optional original flycheck error object."
     ;; Default to warning for any other type
     (_ 'flycheck-overlay-warning)))
 
-(defun flycheck-overlay--get-indicator (type)
-  "Return the indicator string corresponding to the error TYPE."
+(defun flycheck-overlay--get-indicator (type color)
+  "Return the indicator string corresponding to the error TYPE COLOR"
   (let* ((props (pcase type
                   ('flycheck-overlay-error
                    (cons flycheck-overlay-error-icon 'flycheck-overlay-error))
@@ -389,17 +388,17 @@ ERROR is the optional original flycheck error object."
          (icon (car props))
          (face-name (cdr props))
          (height (face-attribute face-name :height))
-         (color (if flycheck-overlay-use-theme-colors
+         (bg (if flycheck-overlay-use-theme-colors
                     (pcase face-name
-                      ('flycheck-overlay-error 
+                      ('flycheck-overlay-error
                        (flycheck-overlay--get-theme-face-color 'error :foreground))
-                      ('flycheck-overlay-warning 
+                      ('flycheck-overlay-warning
                        (flycheck-overlay--get-theme-face-color 'warning :foreground))
-                      ('flycheck-overlay-info 
+                      ('flycheck-overlay-info
                        (flycheck-overlay--get-theme-face-color 'success :foreground))
                       (_ (face-attribute face-name :foreground)))
                   (face-attribute face-name :foreground)))
-         (bg-color (flycheck-overlay--darken-color color flycheck-overlay-percent-darker)))
+         (bg-color (flycheck-overlay--darken-color bg flycheck-overlay-percent-darker)))
     
     (concat
      ;; Left padding
@@ -436,9 +435,8 @@ ERROR is the optional original flycheck error object."
         ;; Set basic overlay properties
         (overlay-put overlay 'flycheck-overlay t)
         (overlay-put overlay 'evaporate t)
-        (overlay-put overlay 'modification-hooks 
+        (overlay-put overlay 'modification-hooks
                      '(flycheck-overlay--clear-overlay-on-modification))
-        
         ;; Calculate priority based on error level and column
         (let* ((col-pos (save-excursion
                          (goto-char (or beg (point-min)))
@@ -460,17 +458,17 @@ ERROR is the optional original flycheck error object."
                (fg-color (car colors))
                (bg-color (cdr colors))
                ;; (face-with-colors `(:inherit ,face :foreground ,fg-color :background ,bg-color))
-               (indicator (flycheck-overlay--get-indicator face))
                (display-msg (concat " " msg " "))
                (tinted-fg (if flycheck-overlay-text-tint
-                              (flycheck-overlay--tint-color 
-                               fg-color 
-                               flycheck-overlay-text-tint 
+                              (flycheck-overlay--tint-color
+                               fg-color
+                               flycheck-overlay-text-tint
                                flycheck-overlay-text-tint-percent)
                             fg-color))
-               (face-with-colors `(:inherit ,face 
-                                            :foreground ,tinted-fg
-                                            :background ,bg-color))
+               (face-with-colors `(:inherit ,face
+                                   :foreground ,tinted-fg
+                                   :background ,bg-color))
+               (indicator (flycheck-overlay--get-indicator face tinted-fg))
                (virtual-line (when flycheck-overlay-show-virtual-line
                              (propertize (flycheck-overlay-get-arrow)
                                        'face `(:foreground ,fg-color))))
@@ -482,17 +480,17 @@ ERROR is the optional original flycheck error object."
                (marked-string (flycheck-overlay--mark-all-symbols
                              :input display-string
                              :regex flycheck-overlay-regex-mark-quotes
-                             :property `(:inherit flycheck-overlay-marker 
+                             :property `(:inherit flycheck-overlay-marker
                                        :background ,bg-color)))
                (overlay-string (if flycheck-overlay-show-at-eol
                                  (concat (propertize " " 'face face-with-colors)
                                         indicator
                                         (propertize " " 'face face-with-colors)
                                         marked-string)
-                               (flycheck-overlay--create-overlay-string 
+                               (flycheck-overlay--create-overlay-string
                                 col-pos virtual-line indicator marked-string bg-color)))
-               (line-content (buffer-substring-no-properties 
-                            (line-beginning-position) 
+               (line-content (buffer-substring-no-properties
+                            (line-beginning-position)
                             (line-end-position)))
                (is-empty-line (string-empty-p (string-trim line-content)))
                (final-string (cond
@@ -515,7 +513,7 @@ ERROR is the optional original flycheck error object."
           ;; Set the overlay priority
           (overlay-put overlay 'priority final-priority)
           
-          (overlay-put overlay 'after-string 
+          (overlay-put overlay 'after-string
                        (propertize final-string
                                   'rear-nonsticky t
                                   'cursor-sensor-functions nil
@@ -524,7 +522,7 @@ ERROR is the optional original flycheck error object."
           (when (flycheck-error-p error)
             (overlay-put overlay 'flycheck-error error))))
     (error
-     (message "Error in configure-overlay: %S for beg=%S col-pos=%S" 
+     (message "Error in configure-overlay: %S for beg=%S col-pos=%S"
               err beg (when (boundp 'col-pos) col-pos)))))
 
 (defun flycheck-overlay--clear-overlay-on-modification (overlay &rest _)
@@ -543,9 +541,9 @@ BG-COLOR is the background color."
   (let ((result-string
          (if flycheck-overlay-show-at-eol
              (concat " " indicator marked-string)
-           (concat (make-string (or col-pos 0) ?\s) 
-                  virtual-line 
-                  indicator 
+           (concat (make-string (or col-pos 0) ?\s)
+                  virtual-line
+                  indicator
                   marked-string))))
 
     (when flycheck-overlay-debug
