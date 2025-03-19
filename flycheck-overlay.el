@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.5.7
+;; Version: 0.5.8
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -75,7 +75,7 @@ Inherits from the theme's success face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-marker
-  '((t :inherit font-lock-number-face
+  '((t :inherit link
        :height 0.9
        :weight bold))
   "Face used for info overlays."
