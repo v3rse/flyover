@@ -194,7 +194,12 @@ with and without arrow terminators."
           (const :tag "Curved line + arrow" curved-arrow)
           (const :tag "Curved bold + arrow" curved-bold-arrow)
           (const :tag "Curved double + arrow" curved-double-arrow)
-          (const :tag "Curved dotted + arrow" curved-dotted-arrow))
+          (const :tag "Curved dotted + arrow" curved-dotted-arrow)
+
+          (const :tag "arrow" arrow)
+          (const :tag "line" line)
+
+          )
   :group 'flycheck-overlay)
 
 (defun flycheck-overlay-get-arrow-type ()
@@ -218,6 +223,9 @@ with and without arrow terminators."
     ('curved-bold-arrow "╰━━►")
     ('curved-double-arrow "╰══►")
     ('curved-dotted-arrow "╰┈┈►")
+
+    ('arrow "──►")
+    ('line "──")
     
     ;; Default/fallback
     ('no-arrow "")
@@ -414,20 +422,6 @@ ERROR is the optional original flycheck error object."
                  'face `(:background ,bg-color, :height ,height)
                  'display '(space :width flycheck-overlay-icon-right-padding)))))
 
-(defun flycheck-overlay--create-basic-overlay-string (msg face)
-  "Create basic overlay string with MSG and FACE."
-  (propertize (concat " " msg " ")
-              'face face
-              'rear-nonsticky t))
-
-(defun flycheck-overlay--get-virtual-line (face)
-  "Get virtual line with proper face properties."
-  (when flycheck-overlay-show-virtual-line
-    (let ((fg-color (face-foreground face nil t)))
-      (propertize (flycheck-overlay-get-arrow)
-                  'face `(:foreground ,fg-color)
-                  'rear-nonsticky t))))
-
 (defun flycheck-overlay--configure-overlay (overlay face msg beg error)
   "Configure OVERLAY with FACE, MSG, and BEG and ERROR."
   (condition-case err
@@ -457,8 +451,7 @@ ERROR is the optional original flycheck error object."
                (colors (flycheck-overlay--get-face-colors error-level))
                (fg-color (car colors))
                (bg-color (cdr colors))
-               ;; (face-with-colors `(:inherit ,face :foreground ,fg-color :background ,bg-color))
-               (display-msg (concat " " msg " "))
+               (display-msg (concat msg " "))
                (tinted-fg (if flycheck-overlay-text-tint
                               (flycheck-overlay--tint-color
                                fg-color
@@ -475,7 +468,6 @@ ERROR is the optional original flycheck error object."
                (display-string (propertize display-msg
                                          'face face-with-colors
                                          'cursor-sensor-functions nil
-                                         'cursor-intangible t
                                          'rear-nonsticky t))
                (marked-string (flycheck-overlay--mark-all-symbols
                              :input display-string
@@ -483,8 +475,7 @@ ERROR is the optional original flycheck error object."
                              :property `(:inherit flycheck-overlay-marker
                                        :background ,bg-color)))
                (overlay-string (if flycheck-overlay-show-at-eol
-                                 (concat (propertize " " 'face face-with-colors)
-                                        indicator
+                                 (concat " " virtual-line indicator
                                         (propertize " " 'face face-with-colors)
                                         marked-string)
                                (flycheck-overlay--create-overlay-string
@@ -504,8 +495,7 @@ ERROR is the optional original flycheck error object."
                             (is-empty-line
                              (concat indicator marked-string "\n"))
                             ;; Normal line with show-at-eol
-                            (flycheck-overlay-show-at-eol
-                             (concat overlay-string (propertize " " 'face face-with-colors)))
+                            (flycheck-overlay-show-at-eol overlay-string)
                             ;; Normal line without show-at-eol
                             (t
                              (concat overlay-string "\n")))))
@@ -516,8 +506,7 @@ ERROR is the optional original flycheck error object."
           (overlay-put overlay 'after-string
                        (propertize final-string
                                   'rear-nonsticky t
-                                  'cursor-sensor-functions nil
-                                  'cursor-intangible t))
+                                  'cursor-sensor-functions nil))
           
           (when (flycheck-error-p error)
             (overlay-put overlay 'flycheck-error error))))
