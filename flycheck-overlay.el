@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.5.8
+;; Version: 0.5.9
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -34,21 +34,6 @@ Supported values are `flycheck` and `flymake`."
   :type '(set (const :tag "Flycheck" flycheck)
               (const :tag "Flymake" flymake))
   :group 'flycheck-overlay)
-
-(defvar-local flycheck-overlay--overlays nil
-  "List of overlays used in the current buffer.")
-
-(defvar flycheck-overlay--debounce-timer nil
-  "Timer used for debouncing error checks.")
-
-(defvar flycheck-overlay-regex-mark-quotes  "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
-  "Regex to match quoted strings or everything after a colon.")
-
-(defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
-  "Regex used to mark parentheses.")
-
-(defvar flycheck-overlay-checker-regex "^[^\"'(]*?:\\(.*\\)"
-  "Regex used to match the checker name at the start of the error message.")
 
 (defface flycheck-overlay-error
   '((t :inherit error
@@ -136,8 +121,15 @@ Lower values make backgrounds darker."
   :type 'boolean
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-hide-when-cursor-is-on-same-line nil
+(defcustom flycheck-overlay-hide-when-cursor-is-on-same-line t
   "Hide error messages when the cursor is on the same line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-hide-when-cursor-is-at-same-line nil
+  "Hide error messages when cursor is at same line as error.
+Unlike `flycheck-overlay-hide-when-cursor-is-on-same-line', this
+only hides when cursor is at the exact line position of the error."
   :type 'boolean
   :group 'flycheck-overlay)
 
@@ -173,7 +165,8 @@ Lower values make backgrounds darker."
 
 (defcustom flycheck-overlay-virtual-line-type 'curved-dotted-arrow
   "Arrow used to point to the error.
-Provides various line styles including straight, curved, bold, and dotted variations,
+Provides various line styles including
+straight, curved, bold, and dotted variations,
 with and without arrow terminators."
   :type '(choice
           ;; Basic styles (no arrow)
@@ -197,10 +190,23 @@ with and without arrow terminators."
           (const :tag "Curved dotted + arrow" curved-dotted-arrow)
 
           (const :tag "arrow" arrow)
-          (const :tag "line" line)
-
-          )
+          (const :tag "line" line))
   :group 'flycheck-overlay)
+
+(defvar-local flycheck-overlay--overlays nil
+  "List of overlays used in the current buffer.")
+
+(defvar flycheck-overlay--debounce-timer nil
+  "Timer used for debouncing error checks.")
+
+(defvar flycheck-overlay-regex-mark-quotes  "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
+  "Regex to match quoted strings or everything after a colon.")
+
+(defvar flycheck-overlay-regex-mark-parens "\\(\([^\)]+\)\\)"
+  "Regex used to mark parentheses.")
+
+(defvar flycheck-overlay-checker-regex "^[^\"'(]*?:\\(.*\\)"
+  "Regex used to match the checker name at the start of the error message.")
 
 (defun flycheck-overlay-get-arrow-type ()
   "Return the arrow character based on the selected style."
@@ -648,6 +654,8 @@ Ignores colons that appear within quotes or parentheses."
               #'flycheck-overlay--maybe-display-errors-debounced nil t))
   (add-hook 'after-change-functions
             #'flycheck-overlay--handle-buffer-changes nil t)
+  (add-hook 'post-command-hook
+            #'flycheck-overlay--maybe-display-errors-debounced nil t)
   ;; Force initial display of existing errors
   (flycheck-overlay--maybe-display-errors))
 
@@ -664,6 +672,8 @@ Ignores colons that appear within quotes or parentheses."
                  #'flycheck-overlay--maybe-display-errors-debounced t))
   (remove-hook 'after-change-functions
                #'flycheck-overlay--handle-buffer-changes t)
+  (remove-hook 'post-command-hook
+               #'flycheck-overlay--maybe-display-errors-debounced t)
   (setq flycheck-overlay--debounce-timer nil)
   (save-restriction
     (widen)
@@ -672,13 +682,24 @@ Ignores colons that appear within quotes or parentheses."
 (defun flycheck-overlay--maybe-display-errors ()
   "Display errors except on current line."
   (unless (buffer-modified-p)
-    (let ((current-line (line-number-at-pos)))
+    (let ((current-line (line-number-at-pos))
+          (current-col (current-column))
+          (to-delete))
       (flycheck-overlay--display-errors)
-      (when flycheck-overlay-hide-when-cursor-is-on-same-line
       (dolist (ov flycheck-overlay--overlays)
         (when (and (overlayp ov)
                    (= (line-number-at-pos (overlay-start ov)) current-line))
-          (delete-overlay ov)))))))
+          (when flycheck-overlay-hide-when-cursor-is-on-same-line
+            (push ov to-delete))
+          (when (and flycheck-overlay-hide-when-cursor-is-at-same-line
+                     (overlay-get ov 'flycheck-error)
+                     (= (flycheck-error-column (overlay-get ov 'flycheck-error))
+                        current-col))
+            (push ov to-delete))))
+      ;; Delete collected overlays
+      (dolist (ov to-delete)
+        (delete-overlay ov)
+        (setq flycheck-overlay--overlays (delq ov flycheck-overlay--overlays))))))
 
 (defun flycheck-overlay--maybe-display-errors-debounced ()
   "Debounced version of `flycheck-overlay--maybe-display-errors`."
@@ -693,18 +714,22 @@ Ignores colons that appear within quotes or parentheses."
      (message "Error in debounced display: %S" err)
      (setq flycheck-overlay--debounce-timer nil))))
 
-(defun flycheck-overlay--handle-buffer-changes (&rest _)
-  "Handle buffer modifications by clearing overlays on the current line while editing."
+(defun flycheck-overlay--handle-buffer-changes (beg end _len)
+  "Handle buffer modifications by clearing overlays on the modified lines.
+BEG and END mark the beginning and end of the changed region."
   (condition-case err
       (when (buffer-modified-p)
-        (let ((current-line (line-number-at-pos)))
+        (let* ((beg-line (line-number-at-pos beg))
+               (end-line (line-number-at-pos end)))
+          ;; Remove overlays on all modified lines
           (dolist (ov flycheck-overlay--overlays)
             (when (and ov 
                       (overlayp ov)
                       (overlay-buffer ov)  ; Check if overlay is still valid
                       (let ((ov-line (line-number-at-pos (overlay-start ov))))
-                        (= ov-line current-line)))
+                        (and (>= ov-line beg-line) (<= ov-line end-line))))
               (delete-overlay ov)))
+          ;; Update our list of valid overlays
           (setq flycheck-overlay--overlays
                 (cl-remove-if-not (lambda (ov)
                                    (and (overlayp ov)
