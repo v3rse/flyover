@@ -180,6 +180,9 @@ You can customize the appearance of the error indicators using various line and 
 
 ;;; Hide the flychek-overlay when cursor it at the same line
 (setq flycheck-overlay-hide-when-cursor-is-on-same-line t)  ;; default t
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/flycheck_hide_overlay_cursor.gif" alt="Gif of showing hide cursor is on same line"/>
+</p>
 
 ```
 
