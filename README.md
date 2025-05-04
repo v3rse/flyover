@@ -172,15 +172,11 @@ You can customize the appearance of the error indicators using various line and 
 ;;; show at end of the line instead.
 (setq flycheck-overlay-show-at-eol t) 
 
-;;; Hide overlay when cursor is at same line good for shot-at-eol.
-(setq flycheck-overlay-hide-when-cusor-is-on-same-line t) 
+;;; Hide overlay when cursor is at same line, good for show-at-eol.
+(setq flycheck-overlay-hide-when-cursor-is-on-same-line t) 
 
 ;;; Show an arrow (or icon of your choice) before the error to highlight the error a bit more.
 (setq flycheck-overlay-show-virtual-line t)
-
-;;; Hide the flychek-overlay when cursor it at the same line
-(setq flycheck-overlay-hide-when-cursor-is-on-same-line t)  ;; default t
-
 ```
 
 <p align="center">
