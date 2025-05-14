@@ -439,17 +439,17 @@ ERROR is the optional original flycheck error object."
                      '(flycheck-overlay--clear-overlay-on-modification))
         ;; Calculate priority based on error level and column
         (let* ((col-pos (save-excursion
-                         (goto-char (or beg (point-min)))
-                         (current-column)))
+                          (goto-char (or beg (point-min)))
+                          (current-column)))
                ;; Base priority by error type
                (level-priority (pcase (flycheck-error-level error)
-                               ('error 3000)
-                               ('warning 2000)
-                               ('info 1000)
-                               ("error" 3000)
-                               ("warning" 2000)
-                               ("info" 1000)
-                               (_ 2000)))  ;; Default to warning priority
+                                 ('error 3000)
+                                 ('warning 2000)
+                                 ('info 1000)
+                                 ("error" 3000)
+                                 ("warning" 2000)
+                                 ("info" 1000)
+                                 (_ 2000)))  ;; Default to warning priority
                
                ;; Subtract column to make earlier columns appear after later ones
                (final-priority (- level-priority col-pos))
@@ -457,7 +457,7 @@ ERROR is the optional original flycheck error object."
                (colors (flycheck-overlay--get-face-colors error-level))
                (fg-color (car colors))
                (bg-color (cdr colors))
-               (display-msg (concat msg " "))
+               (display-msg (concat " " msg " "))
                (tinted-fg (if flycheck-overlay-text-tint
                               (flycheck-overlay--tint-color
                                fg-color
@@ -465,54 +465,54 @@ ERROR is the optional original flycheck error object."
                                flycheck-overlay-text-tint-percent)
                             fg-color))
                (face-with-colors `(:inherit ,face
-                                   :foreground ,tinted-fg
-                                   :background ,bg-color))
+                                            :foreground ,tinted-fg
+                                            :background ,bg-color))
                (indicator (flycheck-overlay--get-indicator face tinted-fg))
                (virtual-line (when flycheck-overlay-show-virtual-line
-                             (propertize (flycheck-overlay-get-arrow)
-                                       'face `(:foreground ,fg-color))))
+                               (propertize (flycheck-overlay-get-arrow)
+                                           'face `(:foreground ,fg-color))))
                (display-string (propertize display-msg
-                                         'face face-with-colors
-                                         'cursor-sensor-functions nil
-                                         'rear-nonsticky t))
+                                           'face face-with-colors
+                                           'cursor-sensor-functions nil
+                                           'rear-nonsticky t))
                (marked-string (flycheck-overlay--mark-all-symbols
-                             :input display-string
-                             :regex flycheck-overlay-regex-mark-quotes
-                             :property `(:inherit flycheck-overlay-marker
-                                       :background ,bg-color)))
+                               :input display-string
+                               :regex flycheck-overlay-regex-mark-quotes
+                               :property `(:inherit flycheck-overlay-marker
+                                                    :background ,bg-color)))
                (overlay-string (if flycheck-overlay-show-at-eol
-                                 (concat " " virtual-line indicator
-                                        (propertize " " 'face face-with-colors)
-                                        marked-string)
-                               (flycheck-overlay--create-overlay-string
-                                col-pos virtual-line indicator marked-string bg-color)))
+                                   (concat " " virtual-line indicator
+                                           (propertize " " 'face face-with-colors)
+                                           marked-string)
+                                 (flycheck-overlay--create-overlay-string
+                                  col-pos virtual-line indicator marked-string bg-color)))
                (line-content (buffer-substring-no-properties
-                            (line-beginning-position)
-                            (line-end-position)))
+                              (line-beginning-position)
+                              (line-end-position)))
                (is-empty-line (string-empty-p (string-trim line-content)))
                (final-string (cond
-                            ;; Empty line with show-at-eol
-                            ((and is-empty-line flycheck-overlay-show-at-eol)
-                             (concat (propertize " " 'face face-with-colors)
-                                    indicator
-                                    (propertize " " 'face face-with-colors)
-                                    marked-string))
-                            ;; Empty line without show-at-eol
-                            (is-empty-line
-                             (concat indicator marked-string "\n"))
-                            ;; Normal line with show-at-eol
-                            (flycheck-overlay-show-at-eol overlay-string)
-                            ;; Normal line without show-at-eol
-                            (t
-                             (concat overlay-string "\n")))))
+                              ;; Empty line with show-at-eol
+                              ((and is-empty-line flycheck-overlay-show-at-eol)
+                               (concat (propertize " " 'face face-with-colors)
+                                             indicator
+                                             (propertize " " 'face face-with-colors)
+                                             marked-string))
+                              ;; Empty line without show-at-eol
+                              (is-empty-line
+                               (concat indicator marked-string "\n"))
+                              ;; Normal line with show-at-eol
+                              (flycheck-overlay-show-at-eol overlay-string)
+                              ;; Normal line without show-at-eol
+                              (t
+                               (concat overlay-string "\n")))))
           
           ;; Set the overlay priority
           (overlay-put overlay 'priority final-priority)
           
           (overlay-put overlay 'after-string
                        (propertize final-string
-                                  'rear-nonsticky t
-                                  'cursor-sensor-functions nil))
+                                   'rear-nonsticky t
+                                   'cursor-sensor-functions nil))
           
           (when (flycheck-error-p error)
             (overlay-put overlay 'flycheck-error error))))
@@ -779,29 +779,12 @@ Lower LIGHTNESS values create darker backgrounds."
 (defun flycheck-overlay--get-face-colors (level)
   "Get foreground and background colors for error LEVEL.
 Uses theme colors when `flycheck-overlay-use-theme-colors' is non-nil."
-  (if (not flycheck-overlay-use-theme-colors)
-      ;; Use the face directly
-      (let ((face (flycheck-overlay--get-face level)))
-        (cons (face-foreground face nil t)
-              (face-background face nil t)))
-    ;; Use theme colors
-    (pcase level
-      ((or 'error "error")
-       (let ((fg (flycheck-overlay--get-theme-face-color 'error :foreground "#ea8faa")))
-         (cons fg (flycheck-overlay--create-background-from-foreground 
-                   fg flycheck-overlay-background-lightness))))
-      ((or 'warning "warning")
-       (let ((fg (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))
-         (cons fg (flycheck-overlay--create-background-from-foreground 
-                   fg flycheck-overlay-background-lightness))))
-      ((or 'info "info")
-       (let ((fg (flycheck-overlay--get-theme-face-color 'success :foreground "#a8e3a9")))
-         (cons fg (flycheck-overlay--create-background-from-foreground 
-                   fg flycheck-overlay-background-lightness))))
-      (_
-       (let ((fg (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))
-         (cons fg (flycheck-overlay--create-background-from-foreground 
-                   fg flycheck-overlay-background-lightness)))))))
+  (let ((fg (pcase level
+              ((or 'error "error") (flycheck-overlay--get-theme-face-color 'error :foreground "#ea8faa"))
+              ((or 'warning "warning") (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561"))
+              ((or 'info "info") (flycheck-overlay--get-theme-face-color 'success :foreground "#a8e3a9"))
+              (_ (flycheck-overlay--get-theme-face-color 'warning :foreground "#DCA561")))))
+    (cons fg (flycheck-overlay--create-background-from-foreground fg flycheck-overlay-background-lightness))))
 
 (defun flycheck-overlay--tint-color (color tint percent)
   "Tint COLOR according to TINT type and PERCENT amount.
