@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.6.1
+;; Version: 0.7.0
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -27,6 +27,11 @@
   "Display Flycheck/Flymake errors using overlays."
   :prefix "flycheck-overlay-"
   :group 'tools)
+
+(defcustom flycheck-overlay-debug nil
+  "Enable debug messages for flycheck-overlay."
+  :type 'boolean
+  :group 'flycheck-overlay)
 
 (defcustom flycheck-overlay-checkers '(flycheck flymake)
   "Checkers to use for displaying errors.
@@ -153,11 +158,6 @@ only hides when cursor is at the exact line position of the error."
   :type 'number
   :group 'flycheck-overlay)
 
-(defcustom flycheck-overlay-debug nil
-  "Enable debug messages for flycheck-overlay."
- :type 'boolean
- :group 'flycheck-overlay)
-
 (defcustom flycheck-overlay-debounce-interval 0.2
   "Time in seconds to wait before checking and displaying errors after a change."
   :type 'number
@@ -198,6 +198,34 @@ with and without arrow terminators."
 
 (defvar flycheck-overlay--debounce-timer nil
   "Timer used for debouncing error checks.")
+
+;; Color cache for performance optimization
+(defvar flycheck-overlay--color-cache (make-hash-table :test 'equal)
+  "Cache for computed colors to avoid repeated calculations.")
+
+;; Priority constants
+(defconst flycheck-overlay--error-priority 3000
+  "Priority value for error overlays.")
+
+(defconst flycheck-overlay--warning-priority 2000
+  "Priority value for warning overlays.")
+
+(defconst flycheck-overlay--info-priority 1000
+  "Priority value for info overlays.")
+
+;; Error handling utilities
+(defun flycheck-overlay--handle-error (error-symbol error-data context &optional operation)
+  "Centralized error handling for flycheck-overlay.
+ERROR-SYMBOL is the error type, ERROR-DATA contains error details,
+CONTEXT provides operation context, and OPERATION is optional operation name."
+  (let ((error-msg (format "flycheck-overlay error in %s: %s - %s"
+                          (or operation context)
+                          error-symbol
+                          (if (stringp error-data) error-data (format "%S" error-data)))))
+    (when flycheck-overlay-debug
+      (message "Debug: %s" error-msg))
+    ;; Return nil to indicate failure
+    nil))
 
 (defvar flycheck-overlay-regex-mark-quotes  "\\('[^']+'\\|\"[^\"]+\"\\|\{[^\}]+\}\\)"
   "Regex to match quoted strings or everything after a colon.")
@@ -291,30 +319,29 @@ with and without arrow terminators."
         (and (= line1 line2)
              (< (or col1 0) (or col2 0))))))
 
+(defun flycheck-overlay--is-valid-error (err)
+  "Check if ERR is a valid flycheck error with proper positioning."
+  (and err
+       (not (eq err t))
+       (flycheck-error-p err)
+       (let ((line (flycheck-error-line err))
+             (column (flycheck-error-column err)))
+         (and (numberp line) 
+              (>= line 0)
+              (or (not column)
+                  (and (numberp column) (>= column 0)))))))
+
 (defun flycheck-overlay--filter-errors (errors)
   "Filter out invalid ERRORS.
 This function ensures all errors are valid and have proper positions."
   (condition-case filter-err
       (when (and errors (listp errors))
-        (let ((valid-errors
-               (seq-filter
-                (lambda (err)
-                  (and err
-                       (not (eq err t))
-                       (flycheck-error-p err)
-                       (let ((line (flycheck-error-line err))
-                             (column (flycheck-error-column err)))
-                         (and (numberp line) (>= line 0)
-                              (or (not column)
-                                  (and (numberp column) (>= column 0)))))))
-                errors)))
+        (let ((valid-errors (seq-filter #'flycheck-overlay--is-valid-error errors)))
           (when flycheck-overlay-debug
             (message "Debug: Valid errors: %S" valid-errors))
           valid-errors))
     (error
-     (when flycheck-overlay-debug
-       (message "Debug: Error filtering errors: %S for input: %S" filter-err errors))
-     nil)))
+     (flycheck-overlay--handle-error 'filter-error filter-err "error filtering" "filter-errors"))))
 
 (defun flycheck-overlay--get-error-region (err)
   "Get the start and end position for ERR."
@@ -324,9 +351,9 @@ This function ensures all errors are valid and have proper positions."
           (widen)
           (let* ((line (flycheck-error-line err))
                  (start-pos (progn
-                             (goto-char (point-min))
-                             (forward-line (1- line))  ; line is 1-based
-                             (point))))  ; Always get position, even for empty lines
+                              (goto-char (point-min))
+                              (forward-line (1- line))  ; line is 1-based
+                              (point))))  ; Always get position, even for empty lines
             (when start-pos
               (goto-char start-pos)
               (let ((end-pos (line-end-position)))
@@ -334,13 +361,12 @@ This function ensures all errors are valid and have proper positions."
                 (when (= start-pos end-pos)
                   (setq end-pos (1+ start-pos)))
                 (when (and (numberp start-pos) (numberp end-pos)
-                          (> start-pos 0) (> end-pos 0)
-                          (<= start-pos (point-max))
-                          (<= end-pos (point-max)))
+                           (> start-pos 0) (> end-pos 0)
+                           (<= start-pos (point-max))
+                           (<= end-pos (point-max)))
                   (cons start-pos end-pos)))))))
     (error
-     (message "Error in get-error-region: %S" region-err)
-     nil)))
+     (flycheck-overlay--handle-error 'region-error region-err "get-error-region" "get-error-region"))))
 
 (defun flycheck-overlay--create-overlay (region level msg &optional error)
   "Create an overlay at REGION with LEVEL and message MSG.
@@ -370,9 +396,8 @@ ERROR is the optional original flycheck error object."
                 (when (overlayp overlay)
                   (flycheck-overlay--configure-overlay overlay face msg beg error))))))
       (error
-       (when flycheck-overlay-debug
-         (message "Error creating overlay: %S for region: %S level: %S msg: %S"
-                  ov-err region level msg))))
+       (flycheck-overlay--handle-error 'overlay-creation ov-err "create-overlay" 
+                                       (format "region=%S level=%S" region level))))
     overlay))
 
 (defun flycheck-overlay--get-face (type)
@@ -429,80 +454,102 @@ ERROR is the optional original flycheck error object."
                  'display '(space :width flycheck-overlay-icon-right-padding)))))
 
 
+(defun flycheck-overlay--calculate-overlay-priority (error)
+  "Calculate overlay priority based on ERROR level and column position."
+  (let* ((col-pos (when (flycheck-error-p error)
+                    (or (flycheck-error-column error) 0)))
+         (level-priority (pcase (flycheck-error-level error)
+                           ('error flycheck-overlay--error-priority)
+                           ('warning flycheck-overlay--warning-priority)
+                           ('info flycheck-overlay--info-priority)
+                           (_ flycheck-overlay--warning-priority))))
+    (- level-priority (or col-pos 0))))
+
+(defun flycheck-overlay--setup-basic-overlay-properties (overlay error)
+  "Set up basic properties for OVERLAY with ERROR."
+  (overlay-put overlay 'flycheck-overlay t)
+  (overlay-put overlay 'evaporate t)
+  (overlay-put overlay 'modification-hooks
+               '(flycheck-overlay--clear-overlay-on-modification))
+  (overlay-put overlay 'priority (flycheck-overlay--calculate-overlay-priority error))
+  (when (flycheck-error-p error)
+    (overlay-put overlay 'flycheck-error error)))
+
+(defun flycheck-overlay--create-overlay-display-components (face error msg)
+  "Create display components for overlay with FACE, ERROR, and MSG.
+Returns a plist with :fg-color, :bg-color, :tinted-fg, :face-with-colors,
+:indicator, :virtual-line, and :marked-string."
+  (let* ((colors (flycheck-overlay--get-face-colors (flycheck-error-level error)))
+         (fg-color (car colors))
+         (bg-color (cdr colors))
+         (tinted-fg (if flycheck-overlay-text-tint
+                        (flycheck-overlay--tint-color
+                         fg-color
+                         flycheck-overlay-text-tint
+                         flycheck-overlay-text-tint-percent)
+                      fg-color))
+         (face-with-colors `(:inherit ,face
+                                      :foreground ,tinted-fg
+                                      :background ,bg-color))
+         (indicator (flycheck-overlay--get-indicator face tinted-fg))
+         (virtual-line (when flycheck-overlay-show-virtual-line
+                         (propertize (flycheck-overlay-get-arrow)
+                                     'face `(:foreground ,fg-color))))
+         (display-msg (concat " " msg " "))
+         (marked-string (flycheck-overlay--mark-all-symbols
+                         :input (propertize display-msg
+                                            'face face-with-colors
+                                            'cursor-sensor-functions nil
+                                            'rear-nonsticky t)
+                         :regex flycheck-overlay-regex-mark-quotes
+                         :property `(:inherit flycheck-overlay-marker
+                                              :background ,bg-color))))
+    (list :fg-color fg-color
+          :bg-color bg-color
+          :tinted-fg tinted-fg
+          :face-with-colors face-with-colors
+          :indicator indicator
+          :virtual-line virtual-line
+          :marked-string marked-string)))
+
+(defun flycheck-overlay--build-final-overlay-string (components error)
+  "Build the final overlay string from display COMPONENTS and ERROR."
+  (let* ((col-pos (when (flycheck-error-p error)
+                    (or (flycheck-error-column error) 0)))
+         (line-content (string-trim
+                        (buffer-substring-no-properties
+                         (line-beginning-position)
+                         (line-end-position))))
+         (is-empty-line (string-empty-p line-content))
+         (indicator (plist-get components :indicator))
+         (virtual-line (plist-get components :virtual-line))
+         (marked-string (plist-get components :marked-string))
+         (face-with-colors (plist-get components :face-with-colors))
+         (bg-color (plist-get components :bg-color))
+         (overlay-string (if flycheck-overlay-show-at-eol
+                             (concat " " virtual-line indicator
+                                     (propertize " " 'face face-with-colors)
+                                     marked-string)
+                           (flycheck-overlay--create-overlay-string
+                            (if is-empty-line 0 col-pos) virtual-line indicator marked-string bg-color))))
+    (if flycheck-overlay-show-at-eol
+        overlay-string
+      (concat overlay-string "\n"))))
+
 (defun flycheck-overlay--configure-overlay (overlay face msg beg error)
   "Configure OVERLAY with FACE, MSG, BEG, and ERROR."
   (condition-case configure-err
       (when (overlayp overlay)
-        ;; Set basic overlay properties
-        (overlay-put overlay 'flycheck-overlay t)
-        (overlay-put overlay 'evaporate t)
-        (overlay-put overlay 'modification-hooks
-                     '(flycheck-overlay--clear-overlay-on-modification))
-        
-        ;; Calculate priority
-        (let* ((col-pos (when (flycheck-error-p error)
-                          (or (flycheck-error-column error) 0)))
-               (level-priority (pcase (flycheck-error-level error)
-                                 ('error 3000)
-                                 ('warning 2000)
-                                 ('info 1000)
-                                 (_ 2000)))  ;; Default to warning priority
-               (final-priority (- level-priority (or col-pos 0))))
-
-          ;; Set overlay priority
-          (overlay-put overlay 'priority final-priority)
-
-          ;; Generate overlay string
-          (let* ((colors (flycheck-overlay--get-face-colors (flycheck-error-level error)))
-                 (fg-color (car colors))
-                 (bg-color (cdr colors))
-                 (tinted-fg (if flycheck-overlay-text-tint
-                                (flycheck-overlay--tint-color
-                                 fg-color
-                                 flycheck-overlay-text-tint
-                                 flycheck-overlay-text-tint-percent)
-                              fg-color))
-                 (face-with-colors `(:inherit ,face
-                                              :foreground ,tinted-fg
-                                              :background ,bg-color))
-                 (indicator (flycheck-overlay--get-indicator face tinted-fg))
-                 (virtual-line (when flycheck-overlay-show-virtual-line
-                                 (propertize (flycheck-overlay-get-arrow)
-                                             'face `(:foreground ,fg-color))))
-                 (display-msg (concat " " msg " "))
-                 (marked-string (flycheck-overlay--mark-all-symbols
-                                 :input (propertize display-msg
-                                                    'face face-with-colors
-                                                    'cursor-sensor-functions nil
-                                                    'rear-nonsticky t)
-                                 :regex flycheck-overlay-regex-mark-quotes
-                                 :property `(:inherit flycheck-overlay-marker
-                                                      :background ,bg-color)))
-                 (line-content (string-trim
-                                (buffer-substring-no-properties
-                                 (line-beginning-position)
-                                 (line-end-position))))
-                 (is-empty-line (string-empty-p line-content))
-                 (overlay-string (if flycheck-overlay-show-at-eol
-                                     (concat " " virtual-line indicator
-                                             (propertize " " 'face face-with-colors)
-                                             marked-string)
-                                   (flycheck-overlay--create-overlay-string
-                                    (if is-empty-line 0 col-pos) virtual-line indicator marked-string bg-color)))
-                 (final-string (if flycheck-overlay-show-at-eol
-                                   overlay-string
-                                 (concat overlay-string "\n"))))
-
-            ;; Set the overlay string
-            (overlay-put overlay 'after-string
-                         (propertize final-string
-                                     'rear-nonsticky t
-                                     'cursor-sensor-functions nil))
-            (when (flycheck-error-p error)
-              (overlay-put overlay 'flycheck-error error)))))
+        (flycheck-overlay--setup-basic-overlay-properties overlay error)
+        (let* ((components (flycheck-overlay--create-overlay-display-components face error msg))
+               (final-string (flycheck-overlay--build-final-overlay-string components error)))
+          (overlay-put overlay 'after-string
+                       (propertize final-string
+                                   'rear-nonsticky t
+                                   'cursor-sensor-functions nil))))
     (error
-     (message "Error in configure-overlay: %S for beg=%S col-pos=%S"
-              configure-err beg (when (boundp 'col-pos) col-pos)))))
+     (flycheck-overlay--handle-error 'overlay-configuration configure-err 
+                                     "configure-overlay" (format "beg=%S" beg)))))
 
 (defun flycheck-overlay--clear-overlay-on-modification (overlay &rest _)
   "Clear OVERLAY when the buffer is modified."
@@ -619,8 +666,8 @@ Ignores colons that appear within quotes or parentheses."
     (when (overlayp ov)
       (delete-overlay ov)))
   (setq flycheck-overlay--overlays nil)
-  (remove-overlays (point-min) (point-max) 'flycheck-overlay t)
-  (flycheck-delete-all-overlays))
+  ;; Remove any remaining flycheck-overlay overlays
+  (remove-overlays (point-min) (point-max) 'flycheck-overlay t))
 
 ;;;###autoload
 (define-minor-mode flycheck-overlay-mode
@@ -631,18 +678,31 @@ Ignores colons that appear within quotes or parentheses."
       (flycheck-overlay--enable)
     (flycheck-overlay--disable)))
 
+(defun flycheck-overlay--safe-add-hook (hook function)
+  "Safely add FUNCTION to HOOK if not already present."
+  (unless (memq function (symbol-value hook))
+    (add-hook hook function nil t)))
+
+(defun flycheck-overlay--safe-remove-hook (hook function)
+  "Safely remove FUNCTION from HOOK if present."
+  (when (memq function (symbol-value hook))
+    (remove-hook hook function t)))
+
 (defun flycheck-overlay--enable ()
   "Enable Flycheck/Flymake overlay mode."
   (when (memq 'flycheck flycheck-overlay-checkers)
-    (add-hook 'flycheck-after-syntax-check-hook
-              #'flycheck-overlay--maybe-display-errors-debounced nil t))
+    (flycheck-overlay--safe-add-hook 'flycheck-after-syntax-check-hook
+                                     #'flycheck-overlay--maybe-display-errors-debounced))
   (when (memq 'flymake flycheck-overlay-checkers)
-    (add-hook 'flymake-after-diagnostics-hook  ; Changed from flymake-diagnostic-functions
-              #'flycheck-overlay--maybe-display-errors-debounced nil t))
-  (add-hook 'after-change-functions
-            #'flycheck-overlay--handle-buffer-changes nil t)
-  (add-hook 'post-command-hook
-            #'flycheck-overlay--maybe-display-errors-debounced nil t)
+    (flycheck-overlay--safe-add-hook 'flymake-after-show-buffer-diagnostics-hook
+                                     #'flycheck-overlay--maybe-display-errors-debounced))
+  (flycheck-overlay--safe-add-hook 'after-change-functions
+                                   #'flycheck-overlay--handle-buffer-changes)
+  (flycheck-overlay--safe-add-hook 'post-command-hook
+                                   #'flycheck-overlay--maybe-display-errors-debounced)
+  ;; Clear color cache when theme changes
+  (flycheck-overlay--safe-add-hook 'after-load-theme-hook
+                                   #'flycheck-overlay--clear-color-cache)
   ;; Force initial display of existing errors
   (flycheck-overlay--maybe-display-errors))
 
@@ -652,15 +712,17 @@ Ignores colons that appear within quotes or parentheses."
     (cancel-timer flycheck-overlay--debounce-timer)
     (setq flycheck-overlay--debounce-timer nil))
   (when (memq 'flycheck flycheck-overlay-checkers)
-    (remove-hook 'flycheck-after-syntax-check-hook
-                 #'flycheck-overlay--maybe-display-errors-debounced t))
+    (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
+                                        #'flycheck-overlay--maybe-display-errors-debounced))
   (when (memq 'flymake flycheck-overlay-checkers)
-    (remove-hook 'flymake-diagnostic-functions
-                 #'flycheck-overlay--maybe-display-errors-debounced t))
-  (remove-hook 'after-change-functions
-               #'flycheck-overlay--handle-buffer-changes t)
-  (remove-hook 'post-command-hook
-               #'flycheck-overlay--maybe-display-errors-debounced t)
+    (flycheck-overlay--safe-remove-hook 'flymake-after-show-buffer-diagnostics-hook
+                                        #'flycheck-overlay--maybe-display-errors-debounced))
+  (flycheck-overlay--safe-remove-hook 'after-change-functions
+                                      #'flycheck-overlay--handle-buffer-changes)
+  (flycheck-overlay--safe-remove-hook 'post-command-hook
+                                      #'flycheck-overlay--maybe-display-errors-debounced)
+  (flycheck-overlay--safe-remove-hook 'after-load-theme-hook
+                                      #'flycheck-overlay--clear-color-cache)
   (setq flycheck-overlay--debounce-timer nil)
   (save-restriction
     (widen)
@@ -725,12 +787,26 @@ BEG and END mark the beginning and end of the changed region."
     (error
      (message "Error in flycheck-overlay--handle-buffer-changes: %S" err))))
 
+(defun flycheck-overlay--get-cached-color (cache-key color-fn &rest args)
+  "Get color from cache or compute and cache it using COLOR-FN with ARGS."
+  (or (gethash cache-key flycheck-overlay--color-cache)
+      (puthash cache-key (apply color-fn args) flycheck-overlay--color-cache)))
+
+(defun flycheck-overlay--clear-color-cache ()
+  "Clear the color cache."
+  (clrhash flycheck-overlay--color-cache))
+
 (defun flycheck-overlay--color-to-rgb (color)
   "Convert COLOR (hex or name) to RGB components."
-  (let ((rgb (color-values color)))
-    (if rgb
-        (mapcar (lambda (x) (/ x 256)) rgb)
-      (error "Invalid color: %s" color))))
+  (let ((cache-key (format "rgb-%s" color)))
+    (flycheck-overlay--get-cached-color 
+     cache-key
+     (lambda (c)
+       (let ((rgb (color-values c)))
+         (if rgb
+             (mapcar (lambda (x) (/ x 256)) rgb)
+           (error "Invalid color: %s" c))))
+     color)))
 
 (defun flycheck-overlay--rgb-to-hex (r g b)
   "Convert R G B components to hex color string."
@@ -738,12 +814,17 @@ BEG and END mark the beginning and end of the changed region."
 
 (defun flycheck-overlay--darken-color (color percent)
   "Darken COLOR by PERCENT."
-  (let* ((rgb (flycheck-overlay--color-to-rgb color))
-         (darkened (mapcar (lambda (component)
-                            (min 255
-                                 (floor (* component (- 100 percent) 0.01))))
-                          rgb)))
-    (apply 'flycheck-overlay--rgb-to-hex darkened)))
+  (let ((cache-key (format "darken-%s-%d" color percent)))
+    (flycheck-overlay--get-cached-color
+     cache-key
+     (lambda (c p)
+       (let* ((rgb (flycheck-overlay--color-to-rgb c))
+              (darkened (mapcar (lambda (component)
+                                 (min 255
+                                      (floor (* component (- 100 p) 0.01))))
+                               rgb)))
+         (apply 'flycheck-overlay--rgb-to-hex darkened)))
+     color percent)))
 
 (defun flycheck-overlay--get-theme-face-color (face-name attribute &optional fallback)
   "Get color for FACE-NAME's ATTRIBUTE from current theme.
@@ -756,12 +837,17 @@ If not found, return FALLBACK color."
 (defun flycheck-overlay--create-background-from-foreground (fg-color lightness)
   "Create a background color from FG-COLOR with LIGHTNESS percent.
 Lower LIGHTNESS values create darker backgrounds."
-  (let* ((rgb (flycheck-overlay--color-to-rgb fg-color))
-         (bg (mapcar (lambda (component)
-                       (min 255
-                            (floor (* component (/ lightness 100.0)))))
-                     rgb)))
-    (apply 'flycheck-overlay--rgb-to-hex bg)))
+  (let ((cache-key (format "bg-%s-%d" fg-color lightness)))
+    (flycheck-overlay--get-cached-color
+     cache-key
+     (lambda (fg l)
+       (let* ((rgb (flycheck-overlay--color-to-rgb fg))
+              (bg (mapcar (lambda (component)
+                           (min 255
+                                (floor (* component (/ l 100.0)))))
+                         rgb)))
+         (apply 'flycheck-overlay--rgb-to-hex bg)))
+     fg-color lightness)))
 
 (defun flycheck-overlay--get-face-colors (level)
   "Get foreground and background colors for error LEVEL.
