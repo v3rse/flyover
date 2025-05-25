@@ -133,6 +133,11 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 (setq flycheck-overlay-max-line-length 80)
 ```
 
+<p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/flycheck_overlay_multiline.png" alt="Display text on multiple lines"/>
+</p>
+
+
 ## Flycheck Overlay Icons
 
 You can customize the icons used for different types of Flycheck messages in the overlay display. These settings allow you to define custom icons for information, warning, and error messages.
