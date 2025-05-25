@@ -115,6 +115,24 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 (setq flycheck-overlay-debounce-interval 0.2) 
 ```
 
+### Positioning settings
+
+```elisp
+;; Number of lines below the error line to display the overlay
+;; Default is 1 (next line), set to 0 for same line, 2 for two lines below, etc.
+(setq flycheck-overlay-line-position-offset 1)
+```
+
+### Message wrapping settings
+
+```elisp
+;; Enable wrapping of long error messages across multiple lines
+(setq flycheck-overlay-wrap-messages t)
+
+;; Maximum length of each line when wrapping messages
+(setq flycheck-overlay-max-line-length 80)
+```
+
 ## Flycheck Overlay Icons
 
 You can customize the icons used for different types of Flycheck messages in the overlay display. These settings allow you to define custom icons for information, warning, and error messages.
@@ -197,13 +215,40 @@ You can customize the appearance of the error indicators using various line and 
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/under.png" alt="Screenshot of overlay-usage for Emacs."/>
 </p>
 
+## Testing
+
+The package includes comprehensive tests for the message wrapping functionality:
+
+### Running Tests
+
+```bash
+# Run core wrapping tests (no dependencies required)
+emacs -batch -l test-wrapping.el
+
+# Run full test suite (requires flycheck)
+emacs -batch -l flycheck-overlay.el -l flycheck-overlay-test.el -f ert-run-tests-batch-and-exit
+
+# Interactive testing
+# In Emacs: M-x load-file RET flycheck-overlay-test.el RET
+# Then: M-x flycheck-overlay-run-tests
+```
+
+### Test Coverage
+
+- Message wrapping with various lengths
+- Multi-line display functionality  
+- Line position offset behavior
+- Edge cases (empty messages, single words, exact lengths)
+- Integration with flycheck error objects
+
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Add tests for new functionality in `flycheck-overlay-test.el`
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 
 ## Acknowledgments

@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.7.0
+;; Version: 0.7.5
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -191,6 +191,26 @@ with and without arrow terminators."
 
           (const :tag "arrow" arrow)
           (const :tag "line" line))
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-line-position-offset 1
+  "Number of lines below the error line to display the overlay.
+A value of 1 means the overlay appears on the next line after the error.
+A value of 0 means the overlay appears on the same line as the error."
+  :type 'integer
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-wrap-messages t
+  "Whether to wrap long error messages across multiple lines.
+When non-nil, long messages will be displayed on multiple lines.
+When nil, messages will be truncated to fit on a single line."
+  :type 'boolean
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-max-line-length 80
+  "Maximum length of each line when wrapping messages.
+Only used when `flycheck-overlay-wrap-messages' is non-nil."
+  :type 'integer
   :group 'flycheck-overlay)
 
 (defvar-local flycheck-overlay--overlays nil
@@ -381,7 +401,9 @@ ERROR is the optional original flycheck error object."
             (goto-char (min end (point-max)))
             (let* ((next-line-beg (if flycheck-overlay-show-at-eol
                                     end
-                                    (line-beginning-position 2)))
+                                    (progn
+                                      (forward-line flycheck-overlay-line-position-offset)
+                                      (line-beginning-position))))
                    (face (flycheck-overlay--get-face level)))
               (when (and (numberp beg)
                         (numberp end)
@@ -512,8 +534,8 @@ Returns a plist with :fg-color, :bg-color, :tinted-fg, :face-with-colors,
           :virtual-line virtual-line
           :marked-string marked-string)))
 
-(defun flycheck-overlay--build-final-overlay-string (components error)
-  "Build the final overlay string from display COMPONENTS and ERROR."
+(defun flycheck-overlay--build-final-overlay-string (components error msg)
+  "Build the final overlay string from display COMPONENTS, ERROR, and MSG."
   (let* ((col-pos (when (flycheck-error-p error)
                     (or (flycheck-error-column error) 0)))
          (line-content (string-trim
@@ -523,18 +545,65 @@ Returns a plist with :fg-color, :bg-color, :tinted-fg, :face-with-colors,
          (is-empty-line (string-empty-p line-content))
          (indicator (plist-get components :indicator))
          (virtual-line (plist-get components :virtual-line))
-         (marked-string (plist-get components :marked-string))
          (face-with-colors (plist-get components :face-with-colors))
          (bg-color (plist-get components :bg-color))
+         (wrapped-lines (flycheck-overlay--wrap-message msg flycheck-overlay-max-line-length))
          (overlay-string (if flycheck-overlay-show-at-eol
                              (concat " " virtual-line indicator
-                                     (propertize " " 'face face-with-colors)
-                                     marked-string)
-                           (flycheck-overlay--create-overlay-string
-                            (if is-empty-line 0 col-pos) virtual-line indicator marked-string bg-color))))
+                                     (flycheck-overlay--mark-all-symbols
+                                      :input (propertize (concat " " (car wrapped-lines) " ")
+                                                        'face face-with-colors)
+                                      :regex flycheck-overlay-regex-mark-quotes
+                                      :property `(:inherit flycheck-overlay-marker
+                                                           :background ,bg-color)))
+                           (flycheck-overlay--create-multiline-overlay-string
+                            (if is-empty-line 0 col-pos) virtual-line indicator 
+                            wrapped-lines face-with-colors bg-color))))
     (if flycheck-overlay-show-at-eol
         overlay-string
       (concat overlay-string "\n"))))
+
+(defun flycheck-overlay--create-multiline-overlay-string (col-pos virtual-line indicator lines face-with-colors bg-color)
+  "Create multiline overlay string for LINES.
+COL-POS is the column position, VIRTUAL-LINE is the line indicator,
+INDICATOR is the error/warning icon, LINES are the wrapped message lines,
+FACE-WITH-COLORS is the face for text, and BG-COLOR is the background color."
+  (when flycheck-overlay-debug
+    (message "Debug multiline overlay-string: starting with col-pos=%S lines=%S" col-pos lines))
+  (let* ((spaces (if (and (not flycheck-overlay-show-at-eol) col-pos)
+                     (make-string col-pos ?\s)
+                   ""))
+         (first-line (car lines))
+         (remaining-lines (cdr lines))
+         (first-line-string (concat spaces
+                                   virtual-line
+                                   indicator
+                                   (flycheck-overlay--mark-all-symbols
+                                    :input (propertize (concat " " first-line " ")
+                                                       'face face-with-colors)
+                                    :regex flycheck-overlay-regex-mark-quotes
+                                    :property `(:inherit flycheck-overlay-marker
+                                                         :background ,bg-color))))
+         (continuation-lines (mapcar (lambda (line)
+                                      (concat spaces
+                                             (make-string (length virtual-line) ?\s)
+                                             (make-string (length indicator) ?\s)
+                                             (flycheck-overlay--mark-all-symbols
+                                              :input (propertize (concat " " line " ")
+                                                                'face face-with-colors)
+                                              :regex flycheck-overlay-regex-mark-quotes
+                                              :property `(:inherit flycheck-overlay-marker
+                                                                   :background ,bg-color))))
+                                    remaining-lines))
+         (all-lines (cons first-line-string continuation-lines))
+         (result-string (string-join all-lines "\n")))
+    
+    (when flycheck-overlay-debug
+      (message "Debug multiline overlay-string: created string successfully"))
+    (flycheck-overlay--mark-all-symbols
+     :input result-string
+     :regex flycheck-overlay-regex-mark-parens
+     :property `(:inherit flycheck-overlay-marker :background ,bg-color))))
 
 (defun flycheck-overlay--configure-overlay (overlay face msg beg error)
   "Configure OVERLAY with FACE, MSG, BEG, and ERROR."
@@ -542,7 +611,7 @@ Returns a plist with :fg-color, :bg-color, :tinted-fg, :face-with-colors,
       (when (overlayp overlay)
         (flycheck-overlay--setup-basic-overlay-properties overlay error)
         (let* ((components (flycheck-overlay--create-overlay-display-components face error msg))
-               (final-string (flycheck-overlay--build-final-overlay-string components error)))
+               (final-string (flycheck-overlay--build-final-overlay-string components error msg)))
           (overlay-put overlay 'after-string
                        (propertize final-string
                                    'rear-nonsticky t
@@ -620,6 +689,29 @@ Ignores colons that appear within quotes or parentheses."
       (if (string-match flycheck-overlay-checker-regex (flycheck-overlay-replace-curly-quotes msg))
           (setq msg (string-trim (match-string 1 msg))))))
   msg)
+
+(defun flycheck-overlay--wrap-message (msg max-length)
+  "Wrap MSG to multiple lines with each line no longer than MAX-LENGTH.
+Returns a list of strings, each representing a line."
+  (if (not flycheck-overlay-wrap-messages)
+      (list msg)
+    (let ((words (split-string msg " " t))
+          (lines '())
+          (current-line ""))
+      (dolist (word words)
+        (let ((potential-line (if (string-empty-p current-line)
+                                 word
+                               (concat current-line " " word))))
+          (if (<= (length potential-line) max-length)
+              (setq current-line potential-line)
+            ;; Current word would make line too long
+            (when (not (string-empty-p current-line))
+              (push current-line lines))
+            (setq current-line word))))
+      ;; Add the last line if it's not empty
+      (when (not (string-empty-p current-line))
+        (push current-line lines))
+      (nreverse lines))))
 
 (defun flycheck-overlay--display-errors (&optional errors)
   "Display ERRORS using overlays."
