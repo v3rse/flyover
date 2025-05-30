@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.7.5
+;; Version: 0.7.6
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -40,33 +40,39 @@ Supported values are `flycheck` and `flymake`."
               (const :tag "Flymake" flymake))
   :group 'flycheck-overlay)
 
+(defcustom flycheck-overlay-base-height 0.8
+  "Base height for all overlay faces.
+This affects the font size of error, warning and info messages."
+  :type 'number
+  :group 'flycheck-overlay)
+
 (defface flycheck-overlay-error
-  '((t :inherit error
-       :height 0.9
+  `((t :inherit error
+       :height ,flycheck-overlay-base-height
        :weight normal))
   "Face used for error overlays.
 Inherits from the theme's error face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-warning
-  '((t :inherit warning
-       :height 0.9
+  `((t :inherit warning
+       :height ,flycheck-overlay-base-height
        :weight normal))
   "Face used for warning overlays.
 Inherits from the theme's warning face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-info
-  '((t :inherit success
-       :height 0.9
+  `((t :inherit success
+       :height ,flycheck-overlay-base-height
        :weight normal))
   "Face used for info overlays.
 Inherits from the theme's success face."
   :group 'flycheck-overlay)
 
 (defface flycheck-overlay-marker
-  '((t :inherit link
-       :height 0.9
+  `((t :inherit link
+       :height ,flycheck-overlay-base-height
        :weight bold))
   "Face used for info overlays."
   :group 'flycheck-overlay)
@@ -576,25 +582,26 @@ FACE-WITH-COLORS is the face for text, and BG-COLOR is the background color."
          (first-line (car lines))
          (remaining-lines (cdr lines))
          (first-line-string (concat spaces
-                                   virtual-line
-                                   indicator
-                                   (flycheck-overlay--mark-all-symbols
-                                    :input (propertize (concat " " first-line " ")
-                                                       'face face-with-colors)
-                                    :regex flycheck-overlay-regex-mark-quotes
-                                    :property `(:inherit flycheck-overlay-marker
-                                                         :background ,bg-color))))
+                                    virtual-line
+                                    indicator
+                                    (flycheck-overlay--mark-all-symbols
+                                     :input (propertize (concat " " first-line " ")
+                                                        'face face-with-colors)
+                                     :regex flycheck-overlay-regex-mark-quotes
+                                     :property `(:inherit flycheck-overlay-marker
+                                                          :background ,bg-color))))
          (continuation-lines (mapcar (lambda (line)
-                                      (concat spaces
-                                             (make-string (length virtual-line) ?\s)
-                                             (make-string (length indicator) ?\s)
-                                             (flycheck-overlay--mark-all-symbols
-                                              :input (propertize (concat " " line " ")
-                                                                'face face-with-colors)
-                                              :regex flycheck-overlay-regex-mark-quotes
-                                              :property `(:inherit flycheck-overlay-marker
-                                                                   :background ,bg-color))))
-                                    remaining-lines))
+                                       (concat spaces
+                                               (make-string (+ (length virtual-line)
+                                                               (length indicator)) ?\s)
+                                               
+                                               (flycheck-overlay--mark-all-symbols
+                                                :input (propertize (concat " " line " ")
+                                                                   'face face-with-colors)
+                                                :regex flycheck-overlay-regex-mark-quotes
+                                                :property `(:inherit flycheck-overlay-marker
+                                                                     :background ,bg-color))))
+                                     remaining-lines))
          (all-lines (cons first-line-string continuation-lines))
          (result-string (string-join all-lines "\n")))
     
@@ -785,9 +792,9 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-add-hook 'flycheck-after-syntax-check-hook
                                      #'flycheck-overlay--maybe-display-errors-debounced))
-  (when (memq 'flymake flycheck-overlay-checkers)
-    (flycheck-overlay--safe-add-hook 'flymake-after-show-buffer-diagnostics-hook
-                                     #'flycheck-overlay--maybe-display-errors-debounced))
+  ;; (when (memq 'flymake flycheck-overlay-checkers)
+  ;;   (flycheck-overlay--safe-add-hook 'flymake-after-show-buffer-diagnostics-hook
+  ;;                                    #'flycheck-overlay--maybe-display-errors-debounced))
   (flycheck-overlay--safe-add-hook 'after-change-functions
                                    #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-add-hook 'post-command-hook
@@ -806,9 +813,9 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
                                         #'flycheck-overlay--maybe-display-errors-debounced))
-  (when (memq 'flymake flycheck-overlay-checkers)
-    (flycheck-overlay--safe-remove-hook 'flymake-after-show-buffer-diagnostics-hook
-                                        #'flycheck-overlay--maybe-display-errors-debounced))
+  ;; (when (memq 'flymake flycheck-overlay-checkers)
+  ;;   (flycheck-overlay--safe-remove-hook 'flymake-after-show-buffer-diagnostics-hook
+  ;;                                       #'flycheck-overlay--maybe-display-errors-debounced))
   (flycheck-overlay--safe-remove-hook 'after-change-functions
                                       #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-remove-hook 'post-command-hook
