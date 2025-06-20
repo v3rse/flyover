@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.7.7
+;; Version: 0.8
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -38,6 +38,26 @@
 Supported values are `flycheck` and `flymake`."
   :type '(set (const :tag "Flycheck" flycheck)
               (const :tag "Flymake" flymake))
+  :group 'flycheck-overlay)
+
+(defcustom flycheck-overlay-levels '(error warning info)
+  "Error levels to display overlays for.
+Only errors with these levels will be shown as overlays.
+You can customize which levels are displayed by modifying this list.
+
+Example configurations:
+- Show only errors: '(error)
+- Show errors and warnings: '(error warning)
+- Show all levels: '(error warning info)
+
+To change this setting interactively:
+1. M-x customize-group RET flycheck-overlay RET
+2. Find the 'Levels' setting
+3. Toggle the levels you want to display
+4. Apply and save the changes"
+  :type '(set (const :tag "Errors" error)
+              (const :tag "Warnings" warning) 
+              (const :tag "Info" info))
   :group 'flycheck-overlay)
 
 (defcustom flycheck-overlay-base-height 0.8
@@ -351,11 +371,13 @@ CONTEXT provides operation context, and OPERATION is optional operation name."
        (not (eq err t))
        (flycheck-error-p err)
        (let ((line (flycheck-error-line err))
-             (column (flycheck-error-column err)))
+             (column (flycheck-error-column err))
+             (level (flycheck-error-level err)))
          (and (numberp line) 
               (>= line 0)
               (or (not column)
-                  (and (numberp column) (>= column 0)))))))
+                  (and (numberp column) (>= column 0)))
+              (memq level flycheck-overlay-levels)))))
 
 (defun flycheck-overlay--filter-errors (errors)
   "Filter out invalid ERRORS.

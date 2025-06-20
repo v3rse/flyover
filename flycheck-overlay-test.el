@@ -106,6 +106,8 @@ Returns a list of created errors for verification."
   (let ((errors '()))
     ;; Clear buffer
     (erase-buffer)
+
+    (setq-local flycheck-overlay-levels '(error info))
     
     ;; Insert some code with errors
     (insert "function calculateComplexValue(param) {\n")
@@ -116,13 +118,13 @@ Returns a list of created errors for verification."
 
     ;; Create error objects with long messages
     (push (flycheck-error-new-at 2 20 'error 
-           "ReferenceError: undefined_variable is not defined. This variable has not been declared in the current scope. Please check if you meant to use a different variable name or declare this variable before using it.")
+                                 "ReferenceError: undefined_variable is not defined. This variable has not been declared in the current scope. Please check if you meant to use a different variable name or declare this variable before using it.")
           errors)
     (push (flycheck-error-new-at 5 7 'warning
-           "Variable 'result' is assigned a value but never used. Consider removing this variable or using it somewhere in your code to avoid this warning.")
+                                 "Variable 'result' is assigned a value but never used. Consider removing this variable or using it somewhere in your code to avoid this warning.")
           errors)
     (push (flycheck-error-new-at 1 1 'info
-           "Consider adding JSDoc documentation for this function. This will help other developers understand the purpose, parameters, and return value of this function.")
+                                 "Consider adding JSDoc documentation for this function. This will help other developers understand the purpose, parameters, and return value of this function.")
           errors)
 
     ;; Display the errors

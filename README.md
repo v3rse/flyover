@@ -42,6 +42,12 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 ```elisp
 ;; Enable flycheck-overlay-mode globally
 (add-hook 'flycheck-mode-hook #'flycheck-overlay-mode)
+
+;; Configure which error levels to display
+;; Possible values: error, warning, info
+(setq flycheck-overlay-levels '(error warning info))  ; Show all levels
+;; (setq flycheck-overlay-levels '(error warning))    ; Show only errors and warnings
+;; (setq flycheck-overlay-levels '(error))            ; Show only errors
 ```
 
 ### Theme Integration
