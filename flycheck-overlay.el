@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.7.6
+;; Version: 0.7.7
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -792,16 +792,10 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-add-hook 'flycheck-after-syntax-check-hook
                                      #'flycheck-overlay--maybe-display-errors-debounced))
-  ;; (when (memq 'flymake flycheck-overlay-checkers)
-  ;;   (flycheck-overlay--safe-add-hook 'flymake-after-show-buffer-diagnostics-hook
-  ;;                                    #'flycheck-overlay--maybe-display-errors-debounced))
   (flycheck-overlay--safe-add-hook 'after-change-functions
                                    #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-add-hook 'post-command-hook
                                    #'flycheck-overlay--maybe-display-errors-debounced)
-  ;; Clear color cache when theme changes
-  (flycheck-overlay--safe-add-hook 'after-load-theme-hook
-                                   #'flycheck-overlay--clear-color-cache)
   ;; Force initial display of existing errors
   (flycheck-overlay--maybe-display-errors))
 
@@ -813,15 +807,10 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
                                         #'flycheck-overlay--maybe-display-errors-debounced))
-  ;; (when (memq 'flymake flycheck-overlay-checkers)
-  ;;   (flycheck-overlay--safe-remove-hook 'flymake-after-show-buffer-diagnostics-hook
-  ;;                                       #'flycheck-overlay--maybe-display-errors-debounced))
   (flycheck-overlay--safe-remove-hook 'after-change-functions
                                       #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-remove-hook 'post-command-hook
                                       #'flycheck-overlay--maybe-display-errors-debounced)
-  (flycheck-overlay--safe-remove-hook 'after-load-theme-hook
-                                      #'flycheck-overlay--clear-color-cache)
   (setq flycheck-overlay--debounce-timer nil)
   (save-restriction
     (widen)
