@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.8
+;; Version: 0.8.1
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -326,22 +326,48 @@ CONTEXT provides operation context, and OPERATION is optional operation name."
     (flymake-diagnostics)))
 
 (defun flycheck-overlay--convert-flymake-diagnostic (diag)
-  "Convert a Flymake DIAG to Flycheck error format."
+  "Convert a Flymake DIAG to Flycheck error format.
+Only converts diagnostics whose level is in `flycheck-overlay-levels'."
   (let* ((beg (flymake-diagnostic-beg diag))
          (type (flymake-diagnostic-type diag))
          (text (flymake-diagnostic-text diag))
-         (level (pcase type
-                 ('flymake-error 'error)
-                 ('flymake-warning 'warning)
-                 ('flymake-note 'info)
-                 (_ 'warning))))
-    (flycheck-error-new-at
-     (line-number-at-pos beg)
-     (save-excursion
-       (goto-char beg)
-       (current-column))
-     level
-     text)))
+         (level (flycheck-overlay--flymake-type-to-level type)))
+    ;; Only convert if the level is enabled
+    (when (memq level flycheck-overlay-levels)
+      (flycheck-error-new-at
+       (line-number-at-pos beg)
+       (save-excursion
+         (goto-char beg)
+         (current-column))
+       level
+       text))))
+
+(defun flycheck-overlay--flymake-type-to-level (type)
+  "Convert Flymake diagnostic TYPE to Flycheck level.
+Handles various forms that Flymake types can take."
+  (let ((type-str (cond
+                   ((symbolp type) (symbol-name type))
+                   ((stringp type) type)
+                   (t (format "%s" type)))))
+    (cond
+     ;; Handle keyword symbols
+     ((eq type :error) 'error)
+     ((eq type :warning) 'warning)
+     ((eq type :note) 'info)
+     ;; Handle regular symbols
+     ((eq type 'flymake-error) 'error)
+     ((eq type 'flymake-warning) 'warning)
+     ((eq type 'flymake-note) 'info)
+     ((eq type 'error) 'error)
+     ((eq type 'warning) 'warning)
+     ((eq type 'note) 'info)
+     ((eq type 'info) 'info)
+     ;; Handle string forms (case-insensitive)
+     ((string-match-p "error" (downcase type-str)) 'error)
+     ((string-match-p "warn" (downcase type-str)) 'warning)
+     ((string-match-p "note\\|info" (downcase type-str)) 'info)
+     ;; Default fallback
+     (t 'warning))))
 
 (defun flycheck-overlay--get-all-errors ()
   "Get all errors from enabled checkers."
@@ -349,12 +375,25 @@ CONTEXT provides operation context, and OPERATION is optional operation name."
     (when (memq 'flycheck flycheck-overlay-checkers)
       (setq all-errors (append all-errors flycheck-current-errors)))
     (when (memq 'flymake flycheck-overlay-checkers)
-      (setq all-errors
-            (append all-errors
-                    (mapcar #'flycheck-overlay--convert-flymake-diagnostic
-                            (flycheck-overlay--get-flymake-diagnostics)))))
+      (let ((flymake-diagnostics (flycheck-overlay--get-flymake-diagnostics)))
+        (when flymake-diagnostics
+          (setq all-errors
+                (append all-errors
+                        (delq nil (mapcar #'flycheck-overlay--convert-flymake-diagnostic
+                                          flymake-diagnostics)))))))
     all-errors))
 
+;; Debug helper function
+(defun flycheck-overlay--debug-flymake-types ()
+  "Debug function to see what types Flymake is actually returning."
+  (interactive)
+  (when (and (bound-and-true-p flymake-mode)
+             (fboundp 'flymake-diagnostics))
+    (let ((diagnostics (flymake-diagnostics)))
+      (message "Flymake diagnostic types found:")
+      (dolist (diag diagnostics)
+        (let ((type (flymake-diagnostic-type diag)))
+          (message "Type: %S (class: %s)" type (type-of type)))))))
 (defun flycheck-overlay--error-position-< (err1 err2)
   "Compare two errors ERR1 and ERR2 by position."
   (let ((line1 (flycheck-error-line err1))
@@ -814,6 +853,13 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-add-hook 'flycheck-after-syntax-check-hook
                                      #'flycheck-overlay--maybe-display-errors-debounced))
+  (when (memq 'flymake flycheck-overlay-checkers)
+    (if (boundp 'flymake-diagnostics-updated-hook)
+        (flycheck-overlay--safe-add-hook 'flymake-diagnostics-updated-hook
+                                         #'flycheck-overlay--maybe-display-errors-debounced)
+      ;; Fallback for older Emacs versions
+      (flycheck-overlay--safe-add-hook 'after-change-functions
+                                       #'flycheck-overlay--maybe-display-errors-debounced)))
   (flycheck-overlay--safe-add-hook 'after-change-functions
                                    #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-add-hook 'post-command-hook
@@ -829,6 +875,13 @@ Returns a list of strings, each representing a line."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
                                         #'flycheck-overlay--maybe-display-errors-debounced))
+  (when (memq 'flymake flycheck-overlay-checkers)
+    (if (boundp 'flymake-diagnostics-updated-hook)
+        (flycheck-overlay--safe-remove-hook 'flymake-diagnostics-updated-hook
+                                            #'flycheck-overlay--maybe-display-errors-debounced)
+      ;; Fallback for older Emacs versions
+      (flycheck-overlay--safe-remove-hook 'after-change-functions
+                                          #'flycheck-overlay--maybe-display-errors-debounced)))
   (flycheck-overlay--safe-remove-hook 'after-change-functions
                                       #'flycheck-overlay--handle-buffer-changes)
   (flycheck-overlay--safe-remove-hook 'post-command-hook

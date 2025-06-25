@@ -193,8 +193,9 @@ Returns a list of created errors for verification."
   (ert-run-tests-interactively "flycheck-overlay-test-"))
 
 ;; Example usage:
-;; (switch-to-buffer (flycheck-overlay-test-buffer))
-(switch-to-buffer (flycheck-overlay-test-multiline-buffer))
+(switch-to-buffer (flycheck-overlay-test-buffer))
+
+;; (switch-to-buffer (flycheck-overlay-test-multiline-buffer))
 
 (provide 'flycheck-overlay-test)
 ;;; flycheck-overlay-test.el ends here
