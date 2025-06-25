@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025 Free Software Foundation, Inc.
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.8.1
+;; Version: 0.8.2
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flycheck-overlay
@@ -46,17 +46,17 @@ Only errors with these levels will be shown as overlays.
 You can customize which levels are displayed by modifying this list.
 
 Example configurations:
-- Show only errors: '(error)
-- Show errors and warnings: '(error warning)
-- Show all levels: '(error warning info)
+- Show only errors: \='(error)
+- Show errors and warnings: \='(error warning)
+- Show all levels: \='(error warning info)
 
 To change this setting interactively:
 1. M-x customize-group RET flycheck-overlay RET
-2. Find the 'Levels' setting
+2. Find the `Levels' setting
 3. Toggle the levels you want to display
 4. Apply and save the changes"
   :type '(set (const :tag "Errors" error)
-              (const :tag "Warnings" warning) 
+              (const :tag "Warnings" warning)
               (const :tag "Info" info))
   :group 'flycheck-overlay)
 
@@ -848,48 +848,60 @@ Returns a list of strings, each representing a line."
   (when (memq function (symbol-value hook))
     (remove-hook hook function t)))
 
+(defun flycheck-overlay--enable-flymake-hooks ()
+  "Enable Flymake-specific hooks."
+  (cond
+   ;; Modern Emacs with the proper hook
+   ((boundp 'flymake-after-update-diagnostics-hook)
+    (flycheck-overlay--safe-add-hook 'flymake-after-update-diagnostics-hook
+                                     #'flycheck-overlay--maybe-display-errors-debounced))
+   ;; Emacs 29+ with different hook name
+   ((boundp 'flymake-diagnostics-updated-hook)
+    (flycheck-overlay--safe-add-hook 'flymake-diagnostics-updated-hook
+                                     #'flycheck-overlay--maybe-display-errors-debounced))
+   ;; Fallback for older versions
+   (t
+    (flycheck-overlay--safe-add-hook 'after-save-hook
+                                     #'flycheck-overlay--maybe-display-errors-debounced)
+    (advice-add 'flymake-handle-report :after
+                #'flycheck-overlay--maybe-display-errors-debounced))))
+
+(defun flycheck-overlay--disable-flymake-hooks ()
+  "Disable Flymake-specific hooks."
+  (when (boundp 'flymake-after-update-diagnostics-hook)
+    (flycheck-overlay--safe-remove-hook 'flymake-after-update-diagnostics-hook
+                                        #'flycheck-overlay--maybe-display-errors-debounced))
+  (when (boundp 'flymake-diagnostics-updated-hook)
+    (flycheck-overlay--safe-remove-hook 'flymake-diagnostics-updated-hook
+                                        #'flycheck-overlay--maybe-display-errors-debounced))
+  (flycheck-overlay--safe-remove-hook 'after-save-hook
+                                      #'flycheck-overlay--maybe-display-errors-debounced)
+  (advice-remove 'flymake-handle-report
+                 #'flycheck-overlay--maybe-display-errors-debounced))
+
 (defun flycheck-overlay--enable ()
   "Enable Flycheck/Flymake overlay mode."
   (when (memq 'flycheck flycheck-overlay-checkers)
     (flycheck-overlay--safe-add-hook 'flycheck-after-syntax-check-hook
                                      #'flycheck-overlay--maybe-display-errors-debounced))
   (when (memq 'flymake flycheck-overlay-checkers)
-    (if (boundp 'flymake-diagnostics-updated-hook)
-        (flycheck-overlay--safe-add-hook 'flymake-diagnostics-updated-hook
-                                         #'flycheck-overlay--maybe-display-errors-debounced)
-      ;; Fallback for older Emacs versions
-      (flycheck-overlay--safe-add-hook 'after-change-functions
-                                       #'flycheck-overlay--maybe-display-errors-debounced)))
+    (flycheck-overlay--enable-flymake-hooks))
+  
   (flycheck-overlay--safe-add-hook 'after-change-functions
                                    #'flycheck-overlay--handle-buffer-changes)
-  (flycheck-overlay--safe-add-hook 'post-command-hook
-                                   #'flycheck-overlay--maybe-display-errors-debounced)
   ;; Force initial display of existing errors
   (flycheck-overlay--maybe-display-errors))
 
 (defun flycheck-overlay--disable ()
   "Disable Flycheck/Flymake overlay mode."
-  (when flycheck-overlay--debounce-timer
-    (cancel-timer flycheck-overlay--debounce-timer)
-    (setq flycheck-overlay--debounce-timer nil))
-  (when (memq 'flycheck flycheck-overlay-checkers)
-    (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
-                                        #'flycheck-overlay--maybe-display-errors-debounced))
+  (flycheck-overlay--safe-remove-hook 'flycheck-after-syntax-check-hook
+                                      #'flycheck-overlay--maybe-display-errors-debounced)
   (when (memq 'flymake flycheck-overlay-checkers)
-    (if (boundp 'flymake-diagnostics-updated-hook)
-        (flycheck-overlay--safe-remove-hook 'flymake-diagnostics-updated-hook
-                                            #'flycheck-overlay--maybe-display-errors-debounced)
-      ;; Fallback for older Emacs versions
-      (flycheck-overlay--safe-remove-hook 'after-change-functions
-                                          #'flycheck-overlay--maybe-display-errors-debounced)))
+    (flycheck-overlay--disable-flymake-hooks))
+  
   (flycheck-overlay--safe-remove-hook 'after-change-functions
                                       #'flycheck-overlay--handle-buffer-changes)
-  (flycheck-overlay--safe-remove-hook 'post-command-hook
-                                      #'flycheck-overlay--maybe-display-errors-debounced)
-  (setq flycheck-overlay--debounce-timer nil)
-  (save-restriction
-    (widen)
-    (flycheck-overlay--clear-overlays)))
+  (flycheck-overlay--clear-overlays))
 
 (defun flycheck-overlay--maybe-display-errors ()
   "Display errors except on current line."
