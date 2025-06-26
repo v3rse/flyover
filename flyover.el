@@ -48,13 +48,8 @@ You can customize which levels are displayed by modifying this list.
 Example configurations:
 - Show only errors: \='(error)
 - Show errors and warnings: \='(error warning)
-- Show all levels: \='(error warning info)
+- Show all levels: \='(error warning info)"
 
-To change this setting interactively:
-1. M-x customize-group RET flyover RET
-2. Find the `Levels' setting
-3. Toggle the levels you want to display
-4. Apply and save the changes"
   :type '(set (const :tag "Errors" error)
               (const :tag "Warnings" warning)
               (const :tag "Info" info))
@@ -412,7 +407,7 @@ Handles various forms that Flymake types can take."
        (let ((line (flycheck-error-line err))
              (column (flycheck-error-column err))
              (level (flycheck-error-level err)))
-         (and (numberp line) 
+         (and (numberp line)
               (>= line 0)
               (or (not column)
                   (and (numberp column) (>= column 0)))
@@ -467,26 +462,26 @@ ERROR is the optional original flycheck error object."
           (save-excursion
             (goto-char (min end (point-max)))
             (let* ((next-line-beg (if flyover-show-at-eol
-                                    end
+                                      end
                                     (progn
                                       (forward-line flyover-line-position-offset)
                                       (line-beginning-position))))
                    (face (flyover--get-face level)))
               (when (and (numberp beg)
-                        (numberp end)
-                        (numberp next-line-beg)
-                        (> beg 0)
-                        (> end 0)
-                        (> next-line-beg 0)
-                        (<= beg (point-max))
-                        (<= end (point-max))
-                        (<= next-line-beg (point-max)))
+                         (numberp end)
+                         (numberp next-line-beg)
+                         (> beg 0)
+                         (> end 0)
+                         (> next-line-beg 0)
+                         (<= beg (point-max))
+                         (<= end (point-max))
+                         (<= next-line-beg (point-max)))
                 (setq overlay (make-overlay beg next-line-beg))
                 (when (overlayp overlay)
                   (flyover--configure-overlay overlay face msg beg error))))))
       (error
-       (flyover--handle-error 'overlay-creation ov-err "create-overlay" 
-                                       (format "region=%S level=%S" region level))))
+       (flyover--handle-error 'overlay-creation ov-err "create-overlay"
+                              (format "region=%S level=%S" region level))))
     overlay))
 
 (defun flyover--get-face (type)
@@ -503,7 +498,7 @@ ERROR is the optional original flycheck error object."
     (_ 'flyover-warning)))
 
 (defun flyover--get-indicator (type color)
-  "Return the indicator string corresponding to the error TYPE COLOR"
+  "Return the indicator string corresponding to the error TYPE COLOR."
   (let* ((props (pcase type
                   ('flyover-error
                    (cons flyover-error-icon 'flyover-error))
@@ -624,7 +619,7 @@ Returns a plist with :fg-color, :bg-color, :tinted-fg, :face-with-colors,
                                       :property `(:inherit flyover-marker
                                                            :background ,bg-color)))
                            (flyover--create-multiline-overlay-string
-                            (if is-empty-line 0 col-pos) virtual-line indicator 
+                            (if is-empty-line 0 col-pos) virtual-line indicator
                             wrapped-lines face-with-colors bg-color))))
     (if flyover-show-at-eol
         overlay-string
@@ -685,8 +680,8 @@ FACE-WITH-COLORS is the face for text, and BG-COLOR is the background color."
                                    'rear-nonsticky t
                                    'cursor-sensor-functions nil))))
     (error
-     (flyover--handle-error 'overlay-configuration configure-err 
-                                     "configure-overlay" (format "beg=%S" beg)))))
+     (flyover--handle-error 'overlay-configuration configure-err
+                            "configure-overlay" (format "beg=%S" beg)))))
 
 (defun flyover--clear-overlay-on-modification (overlay &rest _)
   "Clear OVERLAY when the buffer is modified."
@@ -787,7 +782,7 @@ Returns a list of strings, each representing a line."
       (let* ((filtered-errors (flyover--filter-errors (or errors (flyover--get-all-errors))))
              (sorted-errors (progn
                               (when flyover-debug
-                                (message "Before sorting: %S" 
+                                (message "Before sorting: %S"
                                          (mapcar (lambda (err)
                                                    (cons (flycheck-error-line err)
                                                          (flycheck-error-column err)))
@@ -797,7 +792,7 @@ Returns a list of strings, each representing a line."
           (message "After sorting: %S"
                    (mapcar (lambda (err)
                              (cons (flycheck-error-line err)
-                                 (flycheck-error-column err)))
+                                   (flycheck-error-column err)))
                            sorted-errors))
           (message "Error levels: %S"
                    (mapcar #'flycheck-error-level sorted-errors)))
@@ -812,7 +807,7 @@ Returns a list of strings, each representing a line."
                          for msg = (flycheck-error-message err)
                          for cleaned-msg = (and msg (flyover--remove-checker-name msg))
                          for region = (and cleaned-msg (flyover--get-error-region err))
-                         for overlay = (and region (flyover--create-overlay 
+                         for overlay = (and region (flyover--create-overlay
                                                     region level cleaned-msg err))
                          when overlay
                          collect overlay))))
@@ -947,23 +942,23 @@ BEG and END mark the beginning and end of the changed region."
                (end-line (line-number-at-pos end)))
           ;; Remove overlays on all modified lines
           (dolist (ov flyover--overlays)
-            (when (and ov 
-                      (overlayp ov)
-                      (overlay-buffer ov)  ; Check if overlay is still valid
-                      (let ((ov-line (line-number-at-pos (overlay-start ov))))
-                        (and (>= ov-line beg-line) (<= ov-line end-line))))
+            (when (and ov
+                       (overlayp ov)
+                       (overlay-buffer ov)  ; Check if overlay is still valid
+                       (let ((ov-line (line-number-at-pos (overlay-start ov))))
+                         (and (>= ov-line beg-line) (<= ov-line end-line))))
               (delete-overlay ov)))
           ;; Update our list of valid overlays
           (setq flyover--overlays
                 (cl-remove-if-not (lambda (ov)
-                                   (and (overlayp ov)
+                                    (and (overlayp ov)
                                         (overlay-buffer ov)))
-                                 flyover--overlays))))
+                                  flyover--overlays))))
     (error
      (message "Error in flyover--handle-buffer-changes: %S" err))))
 
 (defun flyover--get-cached-color (cache-key color-fn &rest args)
-  "Get color from cache or compute and cache it using COLOR-FN with ARGS."
+  "Get color from cache or compute and CACHE-KEY it using COLOR-FN with ARGS."
   (or (gethash cache-key flyover--color-cache)
       (puthash cache-key (apply color-fn args) flyover--color-cache)))
 
@@ -974,7 +969,7 @@ BEG and END mark the beginning and end of the changed region."
 (defun flyover--color-to-rgb (color)
   "Convert COLOR (hex or name) to RGB components."
   (let ((cache-key (format "rgb-%s" color)))
-    (flyover--get-cached-color 
+    (flyover--get-cached-color
      cache-key
      (lambda (c)
        (let ((rgb (color-values c)))
