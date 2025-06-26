@@ -4,13 +4,9 @@
 
 A modern, aesthetic overlay display for *Flycheck* and *Flymake* in Emacs. Flyover is a full featured package with tons of features for you to customize. 
 
-<p align="center">
-  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
-</p>
-
 ## Features
 
-- 🎨 Beautiful, customizable overlays for error display
+- 🎨 Beautiful, customizable overlays for error display and theme aware
 - 🚦 Different styles for errors, warnings, and info messages
 - 🔄 Real-time overlay updates while editing
 - 💡 Smart positioning and formatting of error messages
@@ -20,8 +16,8 @@ A modern, aesthetic overlay display for *Flycheck* and *Flymake* in Emacs. Flyov
 ## Screenshots
 
 <p align="center">
+  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_2.png" alt="Screenshot of overlay-usage for Emacs."/>
-  <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_3.png" alt="Screenshot of overlay-usage for Emacs."/>
 </p>
 
 ## Installation
