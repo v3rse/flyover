@@ -1,4 +1,4 @@
-# flycheck-overlay
+# flyover
 
 ❤️ [Please sponsor me if you like this package](https://github.com/sponsors/konrad1977)
 
@@ -28,11 +28,11 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 
 ### Manual Installation
 
-1. Download `flycheck-overlay.el`
+1. Download `flyover.el`
 2. Add to your load path:
 ```elisp
-(add-to-list 'load-path "/path/to/flycheck-overlay")
-(require 'flycheck-overlay)
+(add-to-list 'load-path "/path/to/flyover")
+(require 'flyover)
 ```
 
 ## Configuration
@@ -40,32 +40,32 @@ A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by di
 ### Basic Setup
 
 ```elisp
-;; Enable flycheck-overlay-mode globally
-(add-hook 'flycheck-mode-hook #'flycheck-overlay-mode)
+;; Enable flyover-mode globally
+(add-hook 'flycheck-mode-hook #'flyover-mode)
 
 ;; Configure which error levels to display
 ;; Possible values: error, warning, info
-(setq flycheck-overlay-levels '(error warning info))  ; Show all levels
-;; (setq flycheck-overlay-levels '(error warning))    ; Show only errors and warnings
-;; (setq flycheck-overlay-levels '(error))            ; Show only errors
+(setq flyover-levels '(error warning info))  ; Show all levels
+;; (setq flyover-levels '(error warning))    ; Show only errors and warnings
+;; (setq flyover-levels '(error))            ; Show only errors
 ```
 
 ### Theme Integration
 
 ```elisp
 ;; Use theme colors for error/warning/info faces
-(setq flycheck-overlay-use-theme-colors t)
+(setq flyover-use-theme-colors t)
 
 ;; Adjust background lightness (lower values = darker)
-(setq flycheck-overlay-background-lightness 45)
+(setq flyover-background-lightness 45)
 
 ;; Make icon background darker than foreground
-(setq flycheck-overlay-percent-darker 40)
+(setq flyover-percent-darker 40)
 
-(setq flycheck-overlay-text-tint 'lighter) ;; or 'darker or nil
+(setq flyover-text-tint 'lighter) ;; or 'darker or nil
 
 ;; "Percentage to lighten or darken the text when tinting is enabled."
-(setq flycheck-overlay-text-tint-percent 50)
+(setq flyover-text-tint-percent 50)
 ```
 
 ### Customizing Faces
@@ -74,19 +74,19 @@ You can customize the appearance of overlays by modifying these faces:
 
 ```elisp
 (custom-set-faces
- '(flycheck-overlay-error
+ '(flyover-error
    ((t :background "#453246"
        :foreground "#ea8faa"
        :height 0.9
        :weight normal)))
  
- '(flycheck-overlay-warning
+ '(flyover-warning
    ((t :background "#331100"
        :foreground "#DCA561"
        :height 0.9
        :weight normal)))
  
- '(flycheck-overlay-info
+ '(flyover-info
    ((t :background "#374243"
        :foreground "#a8e3a9"
        :height 0.9
@@ -95,7 +95,7 @@ You can customize the appearance of overlays by modifying these faces:
 
 ## Usage
 
-Once enabled, `flycheck-overlay` will automatically display error messages as overlays below the corresponding line. The overlays will:
+Once enabled, `flyover` will automatically display error messages as overlays below the corresponding line. The overlays will:
 
 - Show errors in red with appropriate background
 - Display warnings in yellow/orange
@@ -108,17 +108,17 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 
 ```elisp
 ;; Choose which checkers to use (flycheck, flymake, or both)
-(setq flycheck-overlay-checkers '(flycheck flymake))
+(setq flyover-checkers '(flycheck flymake))
 
 ;; Enable debug messages
-(setq flycheck-overlay-debug nil)
+(setq flyover-debug nil)
 ```
 
 ### Optimization settings
 
 ```elisp
 ;; Time in seconds to wait before checking and displaying errors after a change
-(setq flycheck-overlay-debounce-interval 0.2) 
+(setq flyover-debounce-interval 0.2) 
 ```
 
 ### Positioning settings
@@ -126,17 +126,17 @@ Once enabled, `flycheck-overlay` will automatically display error messages as ov
 ```elisp
 ;; Number of lines below the error line to display the overlay
 ;; Default is 1 (next line), set to 0 for same line, 2 for two lines below, etc.
-(setq flycheck-overlay-line-position-offset 1)
+(setq flyover-line-position-offset 1)
 ```
 
 ### Message wrapping settings
 
 ```elisp
 ;; Enable wrapping of long error messages across multiple lines
-(setq flycheck-overlay-wrap-messages t)
+(setq flyover-wrap-messages t)
 
 ;; Maximum length of each line when wrapping messages
-(setq flycheck-overlay-max-line-length 80)
+(setq flyover-max-line-length 80)
 ```
 
 <p align="center">
@@ -152,26 +152,26 @@ You can customize the icons used for different types of Flycheck messages in the
 
 ```elisp
 ;;; Icons
-(setq flycheck-overlay-info-icon "🛈")
-(setq flycheck-overlay-warning-icon "⚠")
-(setq flycheck-overlay-error-icon "✘")
+(setq flyover-info-icon "🛈")
+(setq flyover-warning-icon "⚠")
+(setq flyover-error-icon "✘")
 
 ;;; Icon padding
 
 ;;; You might want to adjust this setting if you icons are not centererd or if you more or less space.fs
-(setq flycheck-overlay-icon-left-padding 0.9)
-(setq flycheck-overlay-icon-right-padding 0.9)
+(setq flyover-icon-left-padding 0.9)
+(setq flyover-icon-right-padding 0.9)
 ```
 
 ### Customizing Error Indicators
 
-You can customize the appearance of the error indicators using various line and arrow styles through the `flycheck-overlay-virtual-line-type` variable:
+You can customize the appearance of the error indicators using various line and arrow styles through the `flyover-virtual-line-type` variable:
 
 ```elisp
-(setq flycheck-overlay-virtual-line-type 'curved-dotted-arrow)
+(setq flyover-virtual-line-type 'curved-dotted-arrow)
 
 ;;; Overide virtual-line-type with your own
-(setq flycheck-overlay-virtual-line-icon "╰──") ;;; default its nil
+(setq flyover-virtual-line-icon "╰──") ;;; default its nil
 ```
 
 | Style Name | Display | Description |
@@ -196,16 +196,16 @@ You can customize the appearance of the error indicators using various line and 
 
 ```elisp
 ;;; Hide checker name for a cleaner UI
-(setq flycheck-overlay-hide-checker-name t) 
+(setq flyover-hide-checker-name t) 
 
 ;;; show at end of the line instead.
-(setq flycheck-overlay-show-at-eol t) 
+(setq flyover-show-at-eol t) 
 
 ;;; Hide overlay when cursor is at same line, good for show-at-eol.
-(setq flycheck-overlay-hide-when-cursor-is-on-same-line t) 
+(setq flyover-hide-when-cursor-is-on-same-line t) 
 
 ;;; Show an arrow (or icon of your choice) before the error to highlight the error a bit more.
-(setq flycheck-overlay-show-virtual-line t)
+(setq flyover-show-virtual-line t)
 ```
 
 <p align="center">
@@ -237,11 +237,11 @@ The package includes comprehensive tests for the message wrapping functionality:
 emacs -batch -l test-wrapping.el
 
 # Run full test suite (requires flycheck)
-emacs -batch -l flycheck-overlay.el -l flycheck-overlay-test.el -f ert-run-tests-batch-and-exit
+emacs -batch -l flyover.el -l flycheck-overlay-test.el -f ert-run-tests-batch-and-exit
 
 # Interactive testing
-# In Emacs: M-x load-file RET flycheck-overlay-test.el RET
-# Then: M-x flycheck-overlay-run-tests
+# In Emacs: M-x load-file RET flyover-test.el RET
+# Then: M-x flyover-run-tests
 ```
 
 ### Test Coverage
@@ -256,7 +256,7 @@ emacs -batch -l flycheck-overlay.el -l flycheck-overlay-test.el -f ert-run-tests
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Add tests for new functionality in `flycheck-overlay-test.el`
+3. Add tests for new functionality in `flyover-test.el`
 4. Commit your changes (`git commit -m 'Add some amazing feature'`)
 5. Push to the branch (`git push origin feature/amazing-feature`)
 6. Open a Pull Request
