@@ -1,6 +1,10 @@
-# flyover
-
 ❤️ [Please sponsor me if you like this package](https://github.com/sponsors/konrad1977)
+
+<picture>
+    <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/flyover_logo.png" alt="Flyover logo" height="100" width="100">
+</picture>
+
+# flyover
 
 A modern, aesthetic overlay display for *Flycheck* and *Flymake* in Emacs. Flyover is a full featured package with tons of features for you to customize. 
 
