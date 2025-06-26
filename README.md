@@ -2,7 +2,7 @@
 
 ❤️ [Please sponsor me if you like this package](https://github.com/sponsors/konrad1977)
 
-A modern, aesthetic overlay display for Flycheck errors in Emacs. Flycheck by displaying errors, warnings, and information messages using customizable overlays.
+A modern, aesthetic overlay display for *Flycheck* and *Flymake* in Emacs. Flyover is a full featured package with tons of features for you to customize. 
 
 <p align="center">
   <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/overlay_1.png" alt="Screenshot of overlay-usage for Emacs."/>
