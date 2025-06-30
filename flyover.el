@@ -1,9 +1,7 @@
 ;;; flyover.el --- Display Flycheck errors with overlays -*- lexical-binding: t -*-
 
-;; Copyright (C) 2025 Free Software Foundation, Inc.
-
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.8.2
+;; Version: 0.8.3
 ;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
 ;; Keywords: convenience, tools
 ;; URL: https://github.com/konrad1977/flyover
@@ -990,10 +988,10 @@ BEG and END mark the beginning and end of the changed region."
      (lambda (c p)
        (let* ((rgb (flyover--color-to-rgb c))
               (darkened (mapcar (lambda (component)
-                                 (min 255
+                                  (min 255
                                       (floor (* component (- 100 p) 0.01))))
-                               rgb)))
-         (apply 'flyover--rgb-to-hex darkened)))
+                                rgb)))
+         (apply #'flyover--rgb-to-hex darkened)))
      color percent)))
 
 (defun flyover--get-theme-face-color (face-name attribute &optional fallback)
@@ -1013,10 +1011,10 @@ Lower LIGHTNESS values create darker backgrounds."
      (lambda (fg l)
        (let* ((rgb (flyover--color-to-rgb fg))
               (bg (mapcar (lambda (component)
-                           (min 255
+                            (min 255
                                 (floor (* component (/ l 100.0)))))
-                         rgb)))
-         (apply 'flyover--rgb-to-hex bg)))
+                          rgb)))
+         (apply #'flyover--rgb-to-hex bg)))
      fg-color lightness)))
 
 (defun flyover--get-face-colors (level)
@@ -1039,7 +1037,7 @@ TINT should be either =\'lighter or =\'darker."
                                  (min 255
                                       (floor (+ component (* (- 255 component) (/ percent 100.0))))))
                                rgb)))
-       (apply 'flyover--rgb-to-hex lightened)))
+       (apply #'flyover--rgb-to-hex lightened)))
     ('darker
      (flyover--darken-color color percent))
     (_ color)))

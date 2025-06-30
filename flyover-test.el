@@ -1,14 +1,17 @@
-;;; flycheck-overlay-test.el --- Test utilities for flycheck-overlay -*- lexical-binding: t -*-
+;;; flyover-test.el --- Test utilities for flyover -*- lexical-binding: t -*-
 
-;; Only load if flycheck-overlay is available
+;; Only load if flyover is available
+
+;;; Code:
+
 (condition-case nil
-    (require 'flycheck-overlay)
+    (require 'flyover)
   (error
-   (message "Warning: flycheck-overlay not available. Some tests may not work.")))
+   (message "Warning: flyover not available. Some tests may not work.")))
 
 (require 'ert)
 
-(defun flycheck-overlay-test-insert-errors ()
+(defun flyover-test-insert-errors ()
   "Insert sample errors into current buffer for testing.
 Returns a list of created errors for verification."
   (let ((errors '()))
@@ -36,78 +39,78 @@ Returns a list of created errors for verification."
     (push (flycheck-error-new-at 9 5 'warning "Extra blank line detected at line 8 and column 5") errors)
 
     ;; Display the errors
-    (flycheck-overlay--display-errors errors)
+    (flyover--display-errors errors)
     
     errors))
 
-(defun flycheck-overlay-test-buffer ()
+(defun flyover-test-buffer ()
   "Create a new buffer with test errors and return it."
-  (let ((test-buffer (get-buffer-create "*flycheck-overlay-test*")))
+  (let ((test-buffer (get-buffer-create "*flyover-test*")))
     (with-current-buffer test-buffer
       (erase-buffer)
-      (flycheck-overlay-mode 1)
-      (flycheck-overlay-test-insert-errors))
+      (flyover-mode 1)
+      (flyover-test-insert-errors))
     test-buffer))
 
 ;; Tests for message wrapping functionality
 
-(ert-deftest flycheck-overlay-test-wrap-message-short ()
+(ert-deftest flyover-test-wrap-message-short ()
   "Test that short messages are not wrapped."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 80))
-    (should (equal (flycheck-overlay--wrap-message "Short message" 80)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 80))
+    (should (equal (flyover--wrap-message "Short message" 80)
                    '("Short message")))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-long ()
+(ert-deftest flyover-test-wrap-message-long ()
   "Test that long messages are wrapped correctly."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 20))
-    (should (equal (flycheck-overlay--wrap-message "This is a very long error message that should be wrapped" 20)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 20))
+    (should (equal (flyover--wrap-message "This is a very long error message that should be wrapped" 20)
                    '("This is a very long" "error message that" "should be wrapped")))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-disabled ()
-  "Test that wrapping is disabled when flycheck-overlay-wrap-messages is nil."
-  (let ((flycheck-overlay-wrap-messages nil)
-        (flycheck-overlay-max-line-length 20))
-    (should (equal (flycheck-overlay--wrap-message "This is a very long error message that should not be wrapped" 20)
+(ert-deftest flyover-test-wrap-message-disabled ()
+  "Test that wrapping is disabled when flyover-wrap-messages is nil."
+  (let ((flyover-wrap-messages nil)
+        (flyover-max-line-length 20))
+    (should (equal (flyover--wrap-message "This is a very long error message that should not be wrapped" 20)
                    '("This is a very long error message that should not be wrapped")))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-single-word ()
+(ert-deftest flyover-test-wrap-message-single-word ()
   "Test wrapping with a single long word."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 10))
-    (should (equal (flycheck-overlay--wrap-message "supercalifragilisticexpialidocious" 10)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 10))
+    (should (equal (flyover--wrap-message "supercalifragilisticexpialidocious" 10)
                    '("supercalifragilisticexpialidocious")))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-empty ()
+(ert-deftest flyover-test-wrap-message-empty ()
   "Test wrapping with empty message."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 80))
-    (should (equal (flycheck-overlay--wrap-message "" 80)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 80))
+    (should (equal (flyover--wrap-message "" 80)
                    '()))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-exact-length ()
+(ert-deftest flyover-test-wrap-message-exact-length ()
   "Test wrapping with message exactly at max length."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 20))
-    (should (equal (flycheck-overlay--wrap-message "Exactly twenty chars" 20)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 20))
+    (should (equal (flyover--wrap-message "Exactly twenty chars" 20)
                    '("Exactly twenty chars")))))
 
-(ert-deftest flycheck-overlay-test-wrap-message-multiple-spaces ()
+(ert-deftest flyover-test-wrap-message-multiple-spaces ()
   "Test wrapping with multiple spaces."
-  (let ((flycheck-overlay-wrap-messages t)
-        (flycheck-overlay-max-line-length 20))
-    (should (equal (flycheck-overlay--wrap-message "Word    with    multiple    spaces    should    wrap" 20)
+  (let ((flyover-wrap-messages t)
+        (flyover-max-line-length 20))
+    (should (equal (flyover--wrap-message "Word    with    multiple    spaces    should    wrap" 20)
                    '("Word with multiple" "spaces should wrap")))))
 
-(defun flycheck-overlay-test-multiline-errors ()
+(defun flyover-test-multiline-errors ()
   "Insert sample errors with long messages for multiline testing.
 Returns a list of created errors for verification."
   (let ((errors '()))
     ;; Clear buffer
     (erase-buffer)
 
-    (setq-local flycheck-overlay-levels '(error info))
+    (setq-local flyover-levels '(error info))
     
     ;; Insert some code with errors
     (insert "function calculateComplexValue(param) {\n")
@@ -128,27 +131,27 @@ Returns a list of created errors for verification."
           errors)
 
     ;; Display the errors
-    (flycheck-overlay--display-errors errors)
+    (flyover--display-errors errors)
     
     errors))
 
-(defun flycheck-overlay-test-multiline-buffer ()
+(defun flyover-test-multiline-buffer ()
   "Create a new buffer with multiline test errors and return it."
-  (let ((test-buffer (get-buffer-create "*flycheck-overlay-multiline-test*")))
+  (let ((test-buffer (get-buffer-create "*flyover-multiline-test*")))
     (with-current-buffer test-buffer
       (erase-buffer)
-      (flycheck-overlay-mode 1)
+      (flyover-mode 1)
       ;; Enable wrapping for testing
-      (setq-local flycheck-overlay-wrap-messages t)
-      (setq-local flycheck-overlay-max-line-length 50)
-      (flycheck-overlay-test-multiline-errors))
+      (setq-local flyover-wrap-messages t)
+      (setq-local flyover-max-line-length 50)
+      (flyover-test-multiline-errors))
     test-buffer))
 
-(ert-deftest flycheck-overlay-test-multiline-display ()
+(ert-deftest flyover-test-multiline-display ()
   "Test that multiline overlays are created properly."
   (with-temp-buffer
-    (let ((flycheck-overlay-wrap-messages t)
-          (flycheck-overlay-max-line-length 30))
+    (let ((flyover-wrap-messages t)
+          (flyover-max-line-length 30))
       ;; Setup buffer content
       (insert "some code here\n")
       (insert "more code\n")
@@ -159,14 +162,14 @@ Returns a list of created errors for verification."
              (region (cons (line-beginning-position 2) (line-end-position 2))))
         
         ;; Test that the message is wrapped
-        (let ((wrapped (flycheck-overlay--wrap-message long-msg 30)))
+        (let ((wrapped (flyover--wrap-message long-msg 30)))
           (should (> (length wrapped) 1))
           (should (cl-every (lambda (line) (<= (length line) 30)) wrapped)))))))
 
-(ert-deftest flycheck-overlay-test-line-position-offset ()
+(ert-deftest flyover-test-line-position-offset ()
   "Test that line position offset works correctly."
   (with-temp-buffer
-    (let ((flycheck-overlay-line-position-offset 2))
+    (let ((flyover-line-position-offset 2))
       ;; Setup buffer content
       (insert "line 1\n")
       (insert "line 2 with error\n")
@@ -179,7 +182,7 @@ Returns a list of created errors for verification."
                        (goto-char (point-min))
                        (forward-line 1)
                        (cons (line-beginning-position) (line-end-position))))
-             (overlay (flycheck-overlay--create-overlay region 'error "Test error" error)))
+             (overlay (flyover--create-overlay region 'error "Test error" error)))
         
         (should (overlayp overlay))
         ;; The overlay should start at line 2 but extend to line 4 (2 + offset)
@@ -187,15 +190,15 @@ Returns a list of created errors for verification."
         (should (= (line-number-at-pos) 2))))))
 
 ;; Test runner function
-(defun flycheck-overlay-run-tests ()
-  "Run all flycheck-overlay tests."
+(defun flyover-run-tests ()
+  "Run all flyover tests."
   (interactive)
-  (ert-run-tests-interactively "flycheck-overlay-test-"))
+  (ert-run-tests-interactively "flyover-test-"))
 
 ;; Example usage:
-(switch-to-buffer (flycheck-overlay-test-buffer))
+(switch-to-buffer (flyover-test-buffer))
 
-;; (switch-to-buffer (flycheck-overlay-test-multiline-buffer))
+;; (switch-to-buffer (flyover-test-multiline-buffer))
 
-(provide 'flycheck-overlay-test)
-;;; flycheck-overlay-test.el ends here
+(provide 'flyover-test)
+;;; flyover-test.el ends here
