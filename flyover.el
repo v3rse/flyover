@@ -1,13 +1,14 @@
 ;;; flyover.el --- Display Flycheck errors with overlays -*- lexical-binding: t -*-
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
-;; Version: 0.8.3
-;; Package-Requires: ((emacs "27.1") (flycheck "0.23"))
-;; Keywords: convenience, tools
+;; Version: 0.8.4
+;; Package-Requires: ((emacs "27.1") (flycheck "0.23") (flymake "1.0"))
+;; Keywords: convenience, tools, flycheck, flymake
 ;; URL: https://github.com/konrad1977/flyover
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
-;; This package provides a way to display Flycheck errors using overlays.
+;; This package provides a way to display Flycheck and Flymake errors using overlays.
 ;; It offers customization options for icons, colors, and display behavior.
 
 ;;; Code:
