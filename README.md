@@ -2,6 +2,8 @@
 
 ❤️ [Please sponsor me if you like this package](https://github.com/sponsors/konrad1977)
 
+[![MELPA](https://melpa.org/packages/flyover-badge.svg)](https://melpa.org/#/flyover)
+
 <picture>
     <img src="https://github.com/konrad1977/flycheck-overlay/blob/main/screenshots/flyover_logo.png" alt="Flyover logo" height="300" width="300">
 </picture>
