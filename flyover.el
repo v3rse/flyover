@@ -1,8 +1,8 @@
-;;; flyover.el --- Display Flycheck errors with overlays -*- lexical-binding: t -*-
+;;; flyover.el --- Display Flycheck and Flymake errors with overlays -*- lexical-binding: t -*-
 
 ;; Author: Mikael Konradsson <mikael.konradsson@outlook.com>
 ;; Version: 0.8.4
-;; Package-Requires: ((emacs "27.1") (flycheck "0.23") (flymake "1.0"))
+;; Package-Requires: ((emacs "27.1") (flymake "1.0"))
 ;; Keywords: convenience, tools, flycheck, flymake
 ;; URL: https://github.com/konrad1977/flyover
 ;; SPDX-License-Identifier: MIT
@@ -10,6 +10,8 @@
 ;;; Commentary:
 ;; This package provides a way to display Flycheck and Flymake errors using overlays.
 ;; It offers customization options for icons, colors, and display behavior.
+;; 
+;; Flycheck is optional - if not available, only Flymake support will be enabled.
 
 ;;; Code:
 
@@ -18,9 +20,19 @@
   (seq-filter (lambda (ov) (overlay-get ov 'flyover))
               (overlays-in beg end)))
 
-(require 'flycheck)
 (require 'flymake)
 (require 'cl-lib)
+
+;; Optional flycheck support
+(defun flyover--ensure-flycheck ()
+  "Ensure flycheck is available if needed."
+  (when (and (memq 'flycheck flyover-checkers)
+             (not (featurep 'flycheck)))
+    (condition-case nil
+        (require 'flycheck)
+      (error
+       (message "Flycheck not available, removing from flyover-checkers")
+       (setq flyover-checkers (delq 'flycheck flyover-checkers))))))
 
 (defgroup flyover nil
   "Display Flycheck/Flymake errors using overlays."
@@ -875,7 +887,9 @@ Returns a list of strings, each representing a line."
 
 (defun flyover--enable ()
   "Enable Flycheck/Flymake overlay mode."
-  (when (memq 'flycheck flyover-checkers)
+  (flyover--ensure-flycheck)
+  (when (and (memq 'flycheck flyover-checkers)
+             (featurep 'flycheck))
     (flyover--safe-add-hook 'flycheck-after-syntax-check-hook
                                      #'flyover--maybe-display-errors-debounced))
   (when (memq 'flymake flyover-checkers)
@@ -911,8 +925,11 @@ Returns a list of strings, each representing a line."
             (push ov to-delete))
           (when (and flyover-hide-when-cursor-is-at-same-line
                      (overlay-get ov 'flycheck-error)
-                     (= (flycheck-error-column (overlay-get ov 'flycheck-error))
-                        current-col))
+                     (let ((error (overlay-get ov 'flycheck-error)))
+                       (= (if (featurep 'flycheck)
+                              (flycheck-error-column error)
+                            (plist-get error :column))
+                          current-col)))
             (push ov to-delete))))
       ;; Delete collected overlays
       (dolist (ov to-delete)
