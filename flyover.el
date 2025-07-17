@@ -894,7 +894,13 @@ Returns a list of strings, each representing a line."
     (flyover--safe-add-hook 'after-save-hook
                                      #'flyover--maybe-display-errors-debounced)
     (advice-add 'flymake-handle-report :after
-                #'flyover--maybe-display-errors-debounced))))
+                #'flyover--maybe-display-errors-debounced)))
+  
+  ;; Also add hooks for immediate display when flymake starts
+  (flyover--safe-add-hook 'flymake-mode-hook
+                                   #'flyover--maybe-display-errors-debounced)
+  (flyover--safe-add-hook 'flymake-after-syntax-check-hook
+                                   #'flyover--maybe-display-errors-debounced))
 
 (defun flyover--disable-flymake-hooks ()
   "Disable Flymake-specific hooks."
@@ -907,7 +913,11 @@ Returns a list of strings, each representing a line."
   (flyover--safe-remove-hook 'after-save-hook
                                       #'flyover--maybe-display-errors-debounced)
   (advice-remove 'flymake-handle-report
-                 #'flyover--maybe-display-errors-debounced))
+                 #'flyover--maybe-display-errors-debounced)
+  (flyover--safe-remove-hook 'flymake-mode-hook
+                                      #'flyover--maybe-display-errors-debounced)
+  (flyover--safe-remove-hook 'flymake-after-syntax-check-hook
+                                      #'flyover--maybe-display-errors-debounced))
 
 (defun flyover--enable ()
   "Enable Flycheck/Flymake overlay mode."
@@ -939,26 +949,25 @@ Returns a list of strings, each representing a line."
 
 (defun flyover--maybe-display-errors ()
   "Display errors except on current line."
-  (unless (buffer-modified-p)
-    (let ((current-line (line-number-at-pos))
-          (current-col (current-column))
-          (to-delete))
-      (flyover--display-errors)
-      (dolist (ov flyover--overlays)
-        (when (and (overlayp ov)
-                   (= (line-number-at-pos (overlay-start ov)) current-line))
-          (when flyover-hide-when-cursor-is-on-same-line
-            (push ov to-delete))
-          (when (and flyover-hide-when-cursor-is-at-same-line
-                     (overlay-get ov 'flyover-error)
-                     (let ((error (overlay-get ov 'flyover-error)))
-                       (= (flyover-error-column error)
-                          current-col)))
-            (push ov to-delete))))
-      ;; Delete collected overlays
-      (dolist (ov to-delete)
-        (delete-overlay ov)
-        (setq flyover--overlays (delq ov flyover--overlays))))))
+  (let ((current-line (line-number-at-pos))
+        (current-col (current-column))
+        (to-delete))
+    (flyover--display-errors)
+    (dolist (ov flyover--overlays)
+      (when (and (overlayp ov)
+                 (= (line-number-at-pos (overlay-start ov)) current-line))
+        (when flyover-hide-when-cursor-is-on-same-line
+          (push ov to-delete))
+        (when (and flyover-hide-when-cursor-is-at-same-line
+                   (overlay-get ov 'flyover-error)
+                   (let ((error (overlay-get ov 'flyover-error)))
+                     (= (flyover-error-column error)
+                        current-col)))
+          (push ov to-delete))))
+    ;; Delete collected overlays
+    (dolist (ov to-delete)
+      (delete-overlay ov)
+      (setq flyover--overlays (delq ov flyover--overlays)))))
 
 (defun flyover--maybe-display-errors-debounced ()
   "Debounced version of `flyover--maybe-display-errors`."
